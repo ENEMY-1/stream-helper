@@ -47,5 +47,11 @@ contextBridge.exposeInMainWorld('settingsApi', {
   },
   alertsTest: function (values) {
     return ipcRenderer.invoke('alerts:test', values);
+  },
+  overlayGetUrl: function () {
+    return ipcRenderer.invoke('overlay:get-url');
+  },
+  overlayOpenFolder: function () {
+    ipcRenderer.send('overlay:open-folder');
   }
 });

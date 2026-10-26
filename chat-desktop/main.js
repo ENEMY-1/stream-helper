@@ -1950,6 +1950,14 @@ if (!gotLock) {
     ipcMain.handle('alerts:test', function (event, raw) {
       return testAlerts(raw);
     });
+    ipcMain.handle('overlay:get-url', function () {
+      const file = overlayPath();
+      return 'file://' + file.replace(/\\/g, '/');
+    });
+    ipcMain.on('overlay:open-folder', function () {
+      const file = overlayPath();
+      try { shell.openPath(path.dirname(file)); } catch (error) { log('open overlay folder failed', error.message); }
+    });
     ipcMain.on('settings:open-folder', openSettingsFolder);
     ipcMain.on('settings:close', function () {
       if (settingsWin && !settingsWin.isDestroyed()) settingsWin.close();

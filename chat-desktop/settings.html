@@ -647,6 +647,35 @@
         о начале и конце стрима. Встроенный бот перезапустится сам и сразу
         подхватит новый канал.
       </div>
+
+      <div class="card">
+        <div class="card-head">
+          <span class="dot" style="background:#00d9a5;"></span>
+          <div>
+            <h2>OBS — подключить оверлей</h2>
+            <p>Быстрое добавление чата в OBS как Browser Source</p>
+          </div>
+        </div>
+
+        <p class="path" id="overlay-path" style="word-break:break-all; margin-bottom:12px;"></p>
+
+        <div class="bot-actions">
+          <button class="primary" id="obs-copy-url" type="button">Скопировать ссылку overlay.html</button>
+          <button class="ghost" id="obs-open-folder" type="button">Открыть папку с оверлеем</button>
+        </div>
+
+        <div class="note" style="margin-top:12px;">
+          <b>Как добавить в OBS:</b>
+          <ol style="margin:8px 0 0 18px; padding:0; line-height:1.6;">
+            <li>OBS → Источники → <b>+</b> → <b>Браузер</b> (Browser Source)</li>
+            <li>Название: <i>Мультичат</i> → OK</li>
+            <li>Вставьте скопированную ссылку в поле <b>URL</b></li>
+            <li>Ширина: <b>520</b>, Высота: <b>880</b></li>
+            <li>Включите <b>Обновлять браузер, когда сцена становится активной</b></li>
+            <li>OK — перетащите источник в нужное место</li>
+          </ol>
+        </div>
+      </div>
     </section>
 
     <section class="panel" id="tab-look">
@@ -1345,6 +1374,24 @@
 
   $('alerts-test').addEventListener('click', testAlerts);
 
+  $('obs-copy-url').addEventListener('click', function () {
+    if (api && api.overlayGetUrl) {
+      api.overlayGetUrl().then(function (url) {
+        navigator.clipboard.writeText(url).then(function () {
+          setStatus('Ссылка скопирована в буфер обмена', 'ok');
+        }).catch(function () {
+          setStatus('Не удалось скопировать', 'err');
+        });
+      }).catch(function (error) {
+        setStatus('Ошибка: ' + (error && error.message ? error.message : error), 'err');
+      });
+    }
+  });
+
+  $('obs-open-folder').addEventListener('click', function () {
+    if (api && api.overlayOpenFolder) api.overlayOpenFolder();
+  });
+
   $('form').addEventListener('input', function (event) {
     if (event.target && event.target.type === 'range') return;
     markDirty();
@@ -1372,6 +1419,10 @@
       showBot(data.bot);
       if (data.botProcess) renderBot(data.botProcess);
       $('settings-path').textContent = 'Файл настроек: ' + data.settingsFile;
+      if (api.overlayGetUrl) {
+        var url = await api.overlayGetUrl();
+        $('overlay-path').textContent = url;
+      }
       setStatus('');
     } catch (error) {
       setStatus('Не удалось загрузить настройки: ' + (error && error.message ? error.message : error), 'err');
