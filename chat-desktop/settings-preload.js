@@ -38,5 +38,14 @@ contextBridge.exposeInMainWorld('settingsApi', {
   },
   botOpenFolder: function () {
     ipcRenderer.send('bot:open-folder');
+  },
+  alertsLoad: function () {
+    return ipcRenderer.invoke('alerts:load');
+  },
+  alertsSave: function (values) {
+    return ipcRenderer.invoke('alerts:save', values);
+  },
+  alertsTest: function (values) {
+    return ipcRenderer.invoke('alerts:test', values);
   }
 });

@@ -1,7 +1,7 @@
 {
   "name": "stream-helper",
   "productName": "Stream Helper",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "private": true,
   "description": "Stream Helper: прозрачный чат поверх игры, оверлей для OBS и встроенный Twitch-бот",
   "author": "ENEMY-1",

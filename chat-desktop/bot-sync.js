@@ -179,6 +179,140 @@ function youtubeLinkFromSettings(yt) {
   return channel ? 'https://www.youtube.com/@' + channel : '';
 }
 
+// --- Уведомления в Telegram ------------------------------------------------
+// Живут не в overlay-settings.js, а прямо в bot/config.js: их читает бот,
+// а не оверлей. Поэтому для них отдельные чтение и запись.
+
+function alertValues(raw) {
+  const source = raw || {};
+  return {
+    enabled: source.enabled === true,
+    offlineEnabled: source.offlineEnabled !== false,
+    botToken: String(source.botToken == null ? '' : source.botToken).trim(),
+    chatId: String(source.chatId == null ? '' : source.chatId).trim(),
+    messageThreadId: String(source.messageThreadId == null ? '' : source.messageThreadId).trim()
+  };
+}
+
+function readStreamAlerts(file) {
+  if (!file || !fs.existsSync(file)) {
+    return { ok: false, reason: 'not-found', file: file || '' };
+  }
+
+  let source = fs.readFileSync(file, 'utf8');
+  if (source.charCodeAt(0) === 0xFEFF) source = source.slice(1);
+
+  try {
+    const config = evaluateConfig(source, file);
+    const alerts = config.streamAlerts || {};
+    const telegram = alerts.telegram || {};
+    return {
+      ok: true,
+      file: file,
+      values: alertValues({
+        enabled: alerts.enabled === true,
+        offlineEnabled: alerts.offlineEnabled !== false,
+        botToken: telegram.botToken,
+        chatId: telegram.chatId,
+        messageThreadId: telegram.messageThreadId
+      })
+    };
+  } catch (error) {
+    return { ok: false, reason: 'error', file: file, message: 'config.js сейчас некорректен: ' + error.message };
+  }
+}
+
+function syncStreamAlerts(raw, options) {
+  const opts = options || {};
+  const file = opts.file;
+  const log = opts.log || function () {};
+
+  if (!file || !fs.existsSync(file)) {
+    return { ok: false, reason: 'not-found', file: file || '' };
+  }
+
+  const values = alertValues(raw);
+
+  let source;
+  let hasBom = false;
+  try {
+    source = fs.readFileSync(file, 'utf8');
+    hasBom = source.charCodeAt(0) === 0xFEFF;
+    if (hasBom) source = source.slice(1);
+  } catch (error) {
+    return { ok: false, reason: 'error', file: file, message: 'файл не читается' };
+  }
+
+  try {
+    const root = findExportsObject(source);
+    const alerts = findProperty(source, root.start, root.end, 'streamAlerts');
+    if (!alerts || source[alerts.valueStart] !== '{') {
+      throw new Error('в config.js не найден блок streamAlerts');
+    }
+    const telegram = findProperty(source, alerts.valueStart, alerts.valueEnd, 'telegram');
+    if (!telegram || source[telegram.valueStart] !== '{') {
+      throw new Error('в config.js не найден блок streamAlerts.telegram');
+    }
+
+    const replacements = [];
+
+    function replace(object, start, end, key, text) {
+      const prop = findProperty(source, start, end, key);
+      if (!prop) throw new Error('в config.js не найдено поле ' + object + '.' + key);
+      replacements.push({ start: prop.valueStart, end: prop.valueEnd, text: text });
+    }
+
+    replace('streamAlerts', alerts.valueStart, alerts.valueEnd, 'enabled', values.enabled ? 'true' : 'false');
+    replace('streamAlerts', alerts.valueStart, alerts.valueEnd, 'offlineEnabled', values.offlineEnabled ? 'true' : 'false');
+    replace('streamAlerts.telegram', telegram.valueStart, telegram.valueEnd, 'botToken', quote(values.botToken));
+    replace('streamAlerts.telegram', telegram.valueStart, telegram.valueEnd, 'chatId', quote(values.chatId));
+    replace('streamAlerts.telegram', telegram.valueStart, telegram.valueEnd, 'messageThreadId', quote(values.messageThreadId));
+
+    replacements.sort(function (a, b) { return b.start - a.start; });
+    let next = source;
+    replacements.forEach(function (replacement) {
+      next = next.slice(0, replacement.start) + replacement.text + next.slice(replacement.end);
+    });
+
+    const before = evaluateConfig(source, file).streamAlerts || {};
+    const after = evaluateConfig(next, file).streamAlerts || {};
+    const beforeTelegram = before.telegram || {};
+    const afterTelegram = after.telegram || {};
+    if (after.enabled !== values.enabled ||
+        after.offlineEnabled !== values.offlineEnabled ||
+        String(afterTelegram.botToken || '') !== values.botToken ||
+        String(afterTelegram.chatId || '') !== values.chatId ||
+        String(afterTelegram.messageThreadId || '') !== values.messageThreadId) {
+      throw new Error('проверка streamAlerts после записи не прошла');
+    }
+
+    const changed = next !== source ||
+      before.enabled !== values.enabled ||
+      before.offlineEnabled !== values.offlineEnabled ||
+      String(beforeTelegram.botToken || '') !== values.botToken ||
+      String(beforeTelegram.chatId || '') !== values.chatId ||
+      String(beforeTelegram.messageThreadId || '') !== values.messageThreadId;
+
+    if (!changed) {
+      return { ok: true, changed: false, file: file, values: values };
+    }
+
+    const backup = file + '.bak';
+    try { fs.copyFileSync(file, backup); } catch (error) {
+      log('bot config backup failed', error.message);
+    }
+
+    const tmp = file + '.tmp';
+    fs.writeFileSync(tmp, (hasBom ? '\ufeff' : '') + next, 'utf8');
+    fs.renameSync(tmp, file);
+    log('telegram alerts synced', file);
+    return { ok: true, changed: true, file: file, values: values };
+  } catch (error) {
+    log('telegram alerts sync failed', error.message);
+    return { ok: false, reason: 'error', file: file, message: error.message };
+  }
+}
+
 function syncBotConfig(settings, options) {
   const opts = options || {};
   const file = opts.file;
@@ -314,6 +448,8 @@ function syncBotConfig(settings, options) {
 
 module.exports = {
   syncBotConfig: syncBotConfig,
+  readStreamAlerts: readStreamAlerts,
+  syncStreamAlerts: syncStreamAlerts,
   // для тестов
   _findExportsObject: findExportsObject,
   _findProperty: findProperty,

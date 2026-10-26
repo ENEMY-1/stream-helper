@@ -145,6 +145,7 @@
   .dot.twitch { background: #9146ff; }
   .dot.kick { background: #53fc18; }
   .dot.youtube { background: #ff0033; }
+  .dot.telegram { background: #29a9eb; }
   .dot.bot { background: var(--ok); }
   .dot.bot.stopped, .dot.bot.error { background: var(--err); }
   .dot.bot.starting, .dot.bot.stopping { background: #e3b341; }
@@ -549,6 +550,7 @@
     <button class="tab" type="button" data-tab="look">Внешний вид</button>
     <button class="tab" type="button" data-tab="behavior">Поведение</button>
     <button class="tab" type="button" data-tab="bot">Бот</button>
+    <button class="tab" type="button" data-tab="alerts">Уведомления</button>
   </nav>
 
   <main class="content" id="form">
@@ -825,6 +827,75 @@
         </div>
       </div>
     </section>
+
+    <section class="panel" id="tab-alerts">
+      <div class="card">
+        <div class="card-head">
+          <span class="dot telegram"></span>
+          <div>
+            <h2>Уведомления в Telegram</h2>
+            <p>Сообщение о начале стрима и итоги после эфира</p>
+          </div>
+        </div>
+
+        <label class="switch">
+          <input type="checkbox" id="alerts-enabled">
+          <span>
+            Отправлять уведомления в Telegram
+            <small>Бот пришлёт сообщение, когда начнётся стрим на Twitch.</small>
+          </span>
+        </label>
+
+        <label class="switch">
+          <input type="checkbox" id="alerts-offline">
+          <span>
+            Присылать итоги после стрима
+            <small>Длительность, пик и среднее число зрителей, сообщения в чате,
+            действия модерации.</small>
+          </span>
+        </label>
+
+        <label class="field">
+          <span>Токен бота</span>
+          <div class="secret">
+            <input type="password" id="alerts-token" placeholder="123456789:AA…" autocomplete="off" spellcheck="false">
+            <button class="ghost small" id="toggle-alerts-token" type="button">Показать</button>
+          </div>
+          <small>Создайте бота у <b>@BotFather</b> командой <b>/newbot</b> и скопируйте токен.
+          Он сохраняется только в <b>bot/config.js</b> на этом компьютере.</small>
+        </label>
+
+        <div class="grid-2">
+          <label class="field">
+            <span>Канал или чат</span>
+            <input type="text" id="alerts-chat" placeholder="@имя_канала или -1001234567890" autocomplete="off" spellcheck="false">
+            <small>Публичный канал — <b>@имя_канала</b>, приватный — ID <b>-100…</b>.
+            Бот должен быть администратором канала.</small>
+          </label>
+
+          <label class="field">
+            <span>Тема (необязательно)</span>
+            <input type="number" id="alerts-thread" min="1" step="1" inputmode="numeric" placeholder="номер темы">
+            <small>Только для отдельной темы (topic) в супергруппе. В обычном канале
+            оставьте пустым.</small>
+          </label>
+        </div>
+
+        <div class="bot-actions">
+          <button class="ghost" id="alerts-test" type="button">Отправить тестовое сообщение</button>
+        </div>
+        <p class="path" id="alerts-result"></p>
+        <p class="path" id="alerts-env"></p>
+      </div>
+
+      <div class="note">
+        Как настроить: создайте бота у <b>@BotFather</b>, добавьте его
+        <b>администратором</b> в свой Telegram-канал (с правом публикации),
+        вставьте токен и <b>@имя_канала</b> выше и нажмите
+        «Отправить тестовое сообщение». Если сообщение пришло — нажмите
+        «Сохранить», и бот начнёт присылать уведомления о стримах.
+      </div>
+    </section>
   </main>
 
   <footer class="foot">
@@ -879,6 +950,83 @@
     }
     node.textContent = (bot.exists ? 'Чат-бот: ' : 'Чат-бот не найден: ') + bot.file;
     node.style.color = bot.exists ? '' : '#ffb3ae';
+  }
+
+  // --- Telegram-уведомления ----------------------------------------------
+  var alertsEnv = { token: false, chatId: false };
+  var alertsBusy = false;
+
+  function setAlertsResult(text, kind) {
+    var node = $('alerts-result');
+    node.textContent = text || '';
+    node.style.color = kind === 'ok' ? 'var(--ok)' : (kind === 'err' ? 'var(--err)' : '');
+  }
+
+  function fillAlerts(data) {
+    if (!data) return;
+    var values = data.values || {};
+    $('alerts-enabled').checked = values.enabled === true;
+    $('alerts-offline').checked = values.offlineEnabled !== false;
+    $('alerts-token').value = values.botToken || '';
+    $('alerts-token').type = 'password';
+    $('toggle-alerts-token').textContent = 'Показать';
+    $('alerts-chat').value = values.chatId || '';
+    $('alerts-thread').value = values.messageThreadId || '';
+
+    if (data.envToken != null) alertsEnv.token = data.envToken === true;
+    if (data.envChatId != null) alertsEnv.chatId = data.envChatId === true;
+
+    var env = [];
+    if (alertsEnv.token) env.push('токен');
+    if (alertsEnv.chatId) env.push('chat_id');
+    $('alerts-env').textContent = env.length
+      ? 'Из переменных окружения уже задан ' + env.join(' и ') + '. Поля можно оставить пустыми.'
+      : '';
+    setAlertsResult('');
+  }
+
+  function collectAlerts() {
+    return {
+      enabled: $('alerts-enabled').checked,
+      offlineEnabled: $('alerts-offline').checked,
+      botToken: $('alerts-token').value.trim(),
+      chatId: $('alerts-chat').value.trim(),
+      messageThreadId: $('alerts-thread').value.trim()
+    };
+  }
+
+  async function reloadAlerts() {
+    if (!api || !api.alertsLoad) return;
+    try {
+      fillAlerts(await api.alertsLoad());
+    } catch (error) {
+      setAlertsResult('Не удалось прочитать Telegram-настройки: ' +
+        (error && error.message ? error.message : error), 'err');
+    }
+  }
+
+  async function testAlerts() {
+    if (!api || !api.alertsTest || alertsBusy) return;
+    alertsBusy = true;
+    $('alerts-test').disabled = true;
+    setAlertsResult('Отправляю тестовое сообщение…');
+    try {
+      var result = await api.alertsTest(collectAlerts());
+      if (!result || result.ok !== true) {
+        setAlertsResult((result && result.error) || 'Telegram не принял сообщение.', 'err');
+        return;
+      }
+      var chat = result.chat || {};
+      var name = chat.title || (chat.username ? '@' + chat.username : '');
+      setAlertsResult('Готово: сообщение отправлено' + (name ? ' в «' + name + '»' : '') +
+        '. Проверьте Telegram.', 'ok');
+    } catch (error) {
+      setAlertsResult('Не удалось отправить: ' +
+        (error && error.message ? error.message : error), 'err');
+    } finally {
+      alertsBusy = false;
+      $('alerts-test').disabled = false;
+    }
   }
 
   // --- Встроенный бот: статус и кнопки запуска ---------------------------
@@ -1071,16 +1219,45 @@
     setBusy(true);
     setStatus('Сохраняю…');
     try {
+      var alertsSnapshot = collectAlerts();
       var result = await api.save(collect());
       fill(result.settings);
+
+      var alertResult = null;
+      if (api.alertsSave) {
+        try {
+          alertResult = await api.alertsSave(alertsSnapshot);
+        } catch (error) {
+          alertResult = { ok: false, error: error && error.message ? error.message : String(error) };
+        }
+      }
+
       var syncText = syncMessage(result.sync);
       var botText = '';
       if (result.botRestarting) botText = ' Бот перезапускается с новым каналом.';
       else if (result.botExternal) botText = ' Бот запущен отдельно — перезапусти его сам.';
       else if (result.botAutoStartChanged) botText = ' Автозапуск бота обновлён.';
+
+      var alertsText = '';
       var kind = result.sync && result.sync.ok === false ? 'err' : 'ok';
+      if (alertResult) {
+        if (!alertResult.ok) {
+          alertsText = ' Telegram: ' + (alertResult.error || 'не удалось сохранить настройки.');
+          kind = 'err';
+        } else if (alertResult.changed) {
+          if (alertResult.botRestarting) {
+            alertsText = ' Telegram-уведомления сохранены, бот перезапускается.';
+          } else if (alertResult.botExternal) {
+            alertsText = ' Telegram-уведомления сохранены. Бот запущен отдельно — перезапустите его.';
+          } else {
+            alertsText = ' Telegram-уведомления сохранены.';
+          }
+        }
+        if (alertResult.ok) fillAlerts(alertResult);
+      }
+
       setStatus('Сохранено. Окно поверх игры обновилось; в OBS обнови источник «Мультичат».' +
-        (syncText ? ' ' + syncText : '') + botText, kind);
+        (syncText ? ' ' + syncText : '') + botText + alertsText, kind);
       refreshBot();
     } catch (error) {
       setStatus('Не удалось сохранить: ' + (error && error.message ? error.message : error), 'err');
@@ -1097,6 +1274,7 @@
     try {
       var data = await api.reset();
       fill(data.settings);
+      await reloadAlerts();
       showBot(data.bot);
       var resetSyncText = syncMessage(data.sync);
       var resetKind = data.sync && data.sync.ok === false ? 'err' : 'ok';
@@ -1158,6 +1336,15 @@
     this.textContent = hidden ? 'Скрыть' : 'Показать';
   });
 
+  $('toggle-alerts-token').addEventListener('click', function () {
+    var input = $('alerts-token');
+    var hidden = input.type === 'password';
+    input.type = hidden ? 'text' : 'password';
+    this.textContent = hidden ? 'Скрыть' : 'Показать';
+  });
+
+  $('alerts-test').addEventListener('click', testAlerts);
+
   $('form').addEventListener('input', function (event) {
     if (event.target && event.target.type === 'range') return;
     markDirty();
@@ -1181,6 +1368,7 @@
     try {
       var data = await api.load();
       fill(data.settings);
+      await reloadAlerts();
       showBot(data.bot);
       if (data.botProcess) renderBot(data.botProcess);
       $('settings-path').textContent = 'Файл настроек: ' + data.settingsFile;

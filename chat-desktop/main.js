@@ -9,7 +9,7 @@ const fs = require('node:fs');
 const http = require('node:http');
 const vm = require('node:vm');
 const { spawn } = require('node:child_process');
-const { syncBotConfig } = require('./bot-sync');
+const { syncBotConfig, readStreamAlerts, syncStreamAlerts } = require('./bot-sync');
 const { YouTubeWebReader } = require('./yt-live');
 
 const APP_DIR = __dirname;
@@ -1404,6 +1404,211 @@ function openSettingsWindow() {
   log('settings window opened');
 }
 
+// --- Telegram-уведомления --------------------------------------------------
+// Настройки лежат в bot/config.js (блок streamAlerts). Окно настроек читает
+// и пишет их отдельно от overlay-settings.js: бот читает только config.js.
+
+function normalizeAlerts(raw) {
+  const source = raw || {};
+  return {
+    enabled: source.enabled === true,
+    offlineEnabled: source.offlineEnabled !== false,
+    botToken: String(source.botToken == null ? '' : source.botToken).trim(),
+    chatId: String(source.chatId == null ? '' : source.chatId).trim(),
+    messageThreadId: String(source.messageThreadId == null ? '' : source.messageThreadId).trim()
+  };
+}
+
+function telegramEnv() {
+  return {
+    token: String(process.env.TELEGRAM_BOT_TOKEN || '').trim(),
+    chatId: String(process.env.TELEGRAM_CHAT_ID || '').trim()
+  };
+}
+
+function hideSecret(text, secret) {
+  const value = String(text == null ? '' : text);
+  if (!secret) return value;
+  return value.split(secret).join('•••');
+}
+
+function alertsInfo() {
+  const data = readStreamAlerts(BOT_CONFIG);
+  const env = telegramEnv();
+  if (!data.ok) {
+    return {
+      ok: false,
+      file: BOT_CONFIG,
+      error: data.reason === 'not-found'
+        ? 'Не найден bot/config.js: ' + BOT_CONFIG
+        : (data.message || 'Не удалось прочитать bot/config.js'),
+      envToken: !!env.token,
+      envChatId: !!env.chatId
+    };
+  }
+  return {
+    ok: true,
+    file: data.file,
+    values: data.values,
+    envToken: !!env.token,
+    envChatId: !!env.chatId
+  };
+}
+
+function validateAlerts(values, env) {
+  if (values.messageThreadId && !/^\d+$/.test(values.messageThreadId)) {
+    return 'Номер темы — только цифры. Если темы нет, оставьте поле пустым.';
+  }
+  if (values.botToken && !/^\d+:[A-Za-z0-9_-]+$/.test(values.botToken)) {
+    return 'Токен бота должен выглядеть так: 123456789:AA… Скопируйте его целиком у @BotFather.';
+  }
+  if (/\s/.test(values.chatId)) {
+    return 'В названии канала или ID чата не должно быть пробелов.';
+  }
+  if (values.enabled && !values.botToken && !env.token) {
+    return 'Укажите токен бота — без него Telegram-уведомления не отправляются.';
+  }
+  if (values.enabled && !values.chatId && !env.chatId) {
+    return 'Укажите канал или чат — @имя_канала либо числовой ID (-100…).';
+  }
+  return '';
+}
+
+async function saveAlerts(raw) {
+  const values = normalizeAlerts(raw);
+  const env = telegramEnv();
+  const problem = validateAlerts(values, env);
+  if (problem) return { ok: false, error: problem };
+
+  const result = syncStreamAlerts(values, { file: BOT_CONFIG, log: log });
+  if (!result.ok) {
+    return {
+      ok: false,
+      error: result.reason === 'not-found'
+        ? 'Не найден bot/config.js: ' + BOT_CONFIG
+        : (result.message || 'Не удалось записать bot/config.js')
+    };
+  }
+
+  const out = {
+    ok: true,
+    changed: result.changed,
+    file: result.file,
+    values: result.values,
+    envToken: !!env.token,
+    envChatId: !!env.chatId
+  };
+
+  if (!result.changed) return out;
+
+  log('telegram alerts saved', values.enabled ? 'enabled' : 'disabled',
+    values.chatId ? 'chat set' : 'chat empty');
+
+  if (bot.state === 'running' || bot.state === 'starting') {
+    out.botRestarting = true;
+    restartBot().catch(function (error) { log('bot restart after alerts failed', error.message); });
+  } else if (bot.state === 'external') {
+    out.botExternal = true;
+  }
+
+  return out;
+}
+
+function telegramErrorText(status, description) {
+  const detail = String(description == null ? '' : description);
+  const text = detail.toLowerCase();
+  if (status === 401 || text.includes('unauthorized')) {
+    return 'Telegram не принял токен бота. Скопируйте его заново у @BotFather.';
+  }
+  if (text.includes('chat not found')) {
+    return 'Чат не найден. Проверьте @имя канала или числовой ID (-100…) и что бот добавлен в канал.';
+  }
+  if (text.includes('not enough rights') || text.includes('bot is not a member') ||
+      text.includes('not a member of the chat') || text.includes('have no rights')) {
+    return 'Бот не состоит в канале или не может писать. Добавьте его администратором канала.';
+  }
+  if (text.includes('message thread not found')) {
+    return 'Тема не найдена. Проверьте номер темы или оставьте поле пустым.';
+  }
+  if (text.includes('too many requests')) {
+    return 'Telegram временно ограничил отправку. Подождите немного и повторите.';
+  }
+  if (text.includes('chat_id is empty')) {
+    return 'Укажите @имя канала или ID чата.';
+  }
+  if (text.includes('bot was blocked')) {
+    return 'Получатель заблокировал бота. Разблокируйте его в Telegram.';
+  }
+  return detail ? 'Telegram: ' + detail : 'Telegram вернул ошибку (HTTP ' + status + ').';
+}
+
+async function testAlerts(raw) {
+  const values = normalizeAlerts(raw);
+  const env = telegramEnv();
+  const token = values.botToken || env.token;
+  const chatId = values.chatId || env.chatId;
+
+  if (!token) return { ok: false, error: 'Укажите токен бота — без него Telegram-уведомления не отправляются.' };
+  if (!chatId) return { ok: false, error: 'Укажите канал или чат — @имя_канала либо числовой ID (-100…).' };
+  if (!/^\d+:[A-Za-z0-9_-]+$/.test(token)) {
+    return { ok: false, error: 'Токен бота должен выглядеть так: 123456789:AA… Скопируйте его целиком у @BotFather.' };
+  }
+  if (/\s/.test(chatId)) {
+    return { ok: false, error: 'В названии канала или ID чата не должно быть пробелов.' };
+  }
+  if (values.messageThreadId && !/^\d+$/.test(values.messageThreadId)) {
+    return { ok: false, error: 'Номер темы — только цифры. Если темы нет, оставьте поле пустым.' };
+  }
+
+  const payload = {
+    chat_id: chatId,
+    parse_mode: 'HTML',
+    disable_web_page_preview: true,
+    text: '🔔 <b>Stream Helper</b>\n\n' +
+      'Это тестовое уведомление.\n' +
+      'Если вы его видите, сообщения о начале стрима будут приходить сюда.'
+  };
+  const thread = Number(values.messageThreadId);
+  if (Number.isFinite(thread) && thread > 0) payload.message_thread_id = thread;
+
+  let response;
+  try {
+    response = await fetch('https://api.telegram.org/bot' + token + '/sendMessage', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(15000)
+    });
+  } catch (error) {
+    return {
+      ok: false,
+      error: 'Не удалось связаться с Telegram. Проверьте интернет. ' +
+        hideSecret(error && error.message ? error.message : String(error), token)
+    };
+  }
+
+  const bodyText = await response.text();
+  let data = null;
+  try { data = bodyText ? JSON.parse(bodyText) : null; } catch (error) { /* не JSON */ }
+
+  if (!response.ok || !data || data.ok !== true) {
+    const description = data && (data.description || data.error);
+    return { ok: false, error: telegramErrorText(response.status, hideSecret(description, token)) };
+  }
+
+  const result = data.result || {};
+  const chat = result.chat || {};
+  return {
+    ok: true,
+    chat: {
+      title: String(chat.title || ''),
+      username: String(chat.username || ''),
+      type: String(chat.type || '')
+    },
+    messageId: result.message_id || null
+  };
+}
+
 async function saveSettingsFromWindow(raw) {
   const before = loadSettings().settings;
   const settings = writeSettings(raw);
@@ -1735,6 +1940,15 @@ if (!gotLock) {
     });
     ipcMain.handle('settings:reset', function () {
       return resetSettingsToConfig();
+    });
+    ipcMain.handle('alerts:load', function () {
+      return alertsInfo();
+    });
+    ipcMain.handle('alerts:save', function (event, raw) {
+      return saveAlerts(raw);
+    });
+    ipcMain.handle('alerts:test', function (event, raw) {
+      return testAlerts(raw);
     });
     ipcMain.on('settings:open-folder', openSettingsFolder);
     ipcMain.on('settings:close', function () {

@@ -113,25 +113,32 @@ npm run dist
 
 ### 3. Telegram-уведомления (необязательно)
 
-1. Создайте бота у [@BotFather](https://t.me/BotFather) и скопируйте токен.
-2. Добавьте бота администратором в свой канал.
-3. В `chat-desktop/bot/config.js` заполните:
+1. Создайте бота у [@BotFather](https://t.me/BotFather) командой `/newbot`
+   и скопируйте токен.
+2. Добавьте бота **администратором** в свой Telegram-канал (достаточно права
+   публиковать сообщения).
+3. Откройте настройки приложения (`Ctrl + Alt + S`) → вкладка
+   **«Уведомления»**.
+4. Вставьте токен и канал (`@имя_канала` или числовой ID `-100…`).
+5. Нажмите **«Отправить тестовое сообщение»** — оно придёт в канал.
+6. Включите **«Отправлять уведомления в Telegram»** и нажмите
+   **«Сохранить»**. Бот перезапустится сам.
 
-   ```js
-   streamAlerts: {
-     enabled: true,
-     telegram: {
-       botToken: '123456789:AA...',
-       chatId: '@имя_канала',
-       messageThreadId: ''
-     }
-   }
-   ```
+Те же значения можно вписать вручную в `chat-desktop/bot/config.js`:
 
-4. Перезапустите бота. Проверка: `chat-desktop\bot\test-alert.bat`.
+```js
+streamAlerts: {
+  enabled: true,
+  telegram: {
+    botToken: '123456789:AA...',
+    chatId: '@имя_канала',
+    messageThreadId: ''
+  }
+}
+```
 
 Токен можно не хранить в файле, а задать переменными окружения
-`TELEGRAM_BOT_TOKEN` и `TELEGRAM_CHAT_ID`.
+`TELEGRAM_BOT_TOKEN` и `TELEGRAM_CHAT_ID` — они важнее значений из `config.js`.
 
 ---
 
