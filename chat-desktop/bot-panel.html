@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Бот — Stream Helper</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0b0c13;
+    --panel: #131522;
+    --line: #262a3d;
+    --text: #eef0fa;
+    --muted: #9aa0b8;
+    --accent: #a970ff;
+    --err: #ff7b72;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    height: 100%;
+    margin: 0;
+  }
+
+  body {
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    background:
+      radial-gradient(900px 500px at 20% -10%, rgba(169, 112, 255, 0.13), transparent 62%),
+      radial-gradient(700px 420px at 110% 110%, rgba(62, 166, 255, 0.10), transparent 62%),
+      var(--bg);
+    color: var(--text);
+    font: 14px/1.5 "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+  }
+
+  .box {
+    width: min(520px, calc(100vw - 48px));
+    padding: 34px 34px 30px;
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 60%), var(--panel);
+    box-shadow: 0 26px 70px rgba(0, 0, 0, 0.45);
+    text-align: center;
+    animation: appear 180ms ease-out;
+  }
+
+  @keyframes appear {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  .spinner {
+    width: 46px;
+    height: 46px;
+    margin: 2px auto 20px;
+    border-radius: 50%;
+    border: 3px solid rgba(169, 112, 255, 0.18);
+    border-top-color: var(--accent);
+    animation: spin 900ms linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .icon {
+    display: none;
+    width: 52px;
+    height: 52px;
+    margin: 0 auto 16px;
+    border-radius: 16px;
+    background: rgba(255, 123, 114, 0.10);
+    border: 1px solid rgba(255, 123, 114, 0.35);
+    color: var(--err);
+    font-size: 27px;
+    font-weight: 700;
+    line-height: 50px;
+  }
+
+  .box.error .spinner { display: none; }
+  .box.error .icon { display: block; }
+
+  h1 {
+    margin: 0 0 8px;
+    font-size: 20px;
+    letter-spacing: -0.01em;
+  }
+
+  p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 13.5px;
+  }
+
+  .details {
+    display: none;
+    margin: 18px 0 0;
+    padding: 11px 13px;
+    border: 1px solid var(--line);
+    border-radius: 11px;
+    background: #0e1019;
+    color: #c9cde0;
+    font: 12px/1.45 Consolas, "Cascadia Mono", monospace;
+    text-align: left;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 170px;
+    overflow: auto;
+  }
+
+  .box.error .details { display: block; }
+
+  .actions {
+    display: none;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 20px;
+  }
+
+  .box.error .actions { display: flex; }
+
+  button {
+    font: inherit;
+    font-weight: 700;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--text);
+    padding: 9px 18px;
+    cursor: pointer;
+  }
+
+  button:hover { background: rgba(255, 255, 255, 0.05); }
+
+  button.primary {
+    border-color: transparent;
+    background: linear-gradient(180deg, #b483ff, #8b4dff);
+    color: #fff;
+  }
+
+  button.primary:hover { background: linear-gradient(180deg, #c19bff, #9a63ff); }
+
+  .hint {
+    margin-top: 16px;
+    font-size: 11.5px;
+    color: #6f758c;
+  }
+</style>
+</head>
+<body>
+  <main class="box" id="box">
+    <div class="spinner"></div>
+    <div class="icon">!</div>
+    <h1 id="title">Запускаю бота…</h1>
+    <p id="text">Проверяю настройки и подключаюсь к чату.</p>
+    <pre class="details" id="details"></pre>
+    <div class="actions">
+      <button class="primary" id="retry" type="button">Повторить</button>
+    </div>
+    <p class="hint" id="hint">Панель откроется автоматически, как только бот будет готов.</p>
+  </main>
+
+<script>
+(function () {
+  'use strict';
+
+  var box = document.getElementById('box');
+  var title = document.getElementById('title');
+  var text = document.getElementById('text');
+  var details = document.getElementById('details');
+  var hint = document.getElementById('hint');
+
+  function loading() {
+    box.classList.remove('error');
+    title.textContent = 'Запускаю бота…';
+    text.textContent = 'Проверяю настройки и подключаюсь к чату.';
+    details.textContent = '';
+    hint.textContent = 'Панель откроется автоматически, как только бот будет готов.';
+  }
+
+  // Вызывается главным процессом, если бот не поднялся.
+  window.botPanelFail = function (info) {
+    box.classList.add('error');
+    title.textContent = 'Бот не запустился';
+    text.textContent = 'Приложение не смогло дождаться панели бота.';
+    var message = info && info.message ? String(info.message) : '';
+    var log = info && info.log ? String(info.log) : '';
+    details.textContent = message + (log ? '\n\nЖурнал: ' + log : '');
+    hint.textContent = 'Исправь ошибку и нажми «Повторить». Журнал также лежит в папке bot\\data.';
+  };
+
+  document.getElementById('retry').addEventListener('click', function () {
+    loading();
+    if (window.botPanelApi && typeof window.botPanelApi.retry === 'function') {
+      window.botPanelApi.retry();
+    } else {
+      title.textContent = 'Нет связи с приложением';
+      text.textContent = 'Открой панель бота из трея «Stream Helper — чат и бот».';
+    }
+  });
+})();
+</script>
+</body>
+</html>

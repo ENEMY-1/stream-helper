@@ -1,0 +1,57 @@
+{
+  "name": "stream-helper",
+  "productName": "Stream Helper",
+  "version": "1.1.0",
+  "private": true,
+  "description": "Stream Helper: прозрачный чат поверх игры, оверлей для OBS и встроенный Twitch-бот",
+  "author": "ENEMY-1",
+  "license": "MIT",
+  "main": "chat-desktop/main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test \"chat-desktop/bot/test/*.test.js\"",
+    "dist": "electron-builder --win nsis"
+  },
+  "devDependencies": {
+    "electron": "^45.0.0",
+    "electron-builder": "^26.18.0"
+  },
+  "build": {
+    "appId": "com.streamhelper.chat",
+    "productName": "Stream Helper",
+    "asar": false,
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "chat-desktop/**/*",
+      "chat-overlay/**/*",
+      "!chat-desktop/bot/data/**/*",
+      "!chat-desktop/*.log",
+      "!chat-desktop/position.json",
+      "!chat-desktop/position.json.bak",
+      "!chat-desktop/**/*.bak",
+      "!chat-overlay/overlay-settings.js",
+      "!chat-overlay/overlay-settings.js.bak"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "chat-desktop/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Stream Helper"
+    }
+  }
+}

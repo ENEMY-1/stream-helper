@@ -1,0 +1,21 @@
+node_modules/
+release/
+dist/
+
+# user data and secrets
+chat-desktop/bot/data/*
+!chat-desktop/bot/data/.gitkeep
+chat-desktop/bot/config.js.bak
+chat-desktop/app.log
+chat-desktop/debug.log
+chat-desktop/position.json
+chat-desktop/position.json.bak
+chat-overlay/overlay-settings.js
+chat-overlay/overlay-settings.js.bak
+
+# build artifacts
+*.log
+*.bak
+*.tmp
+*.exe
+*.zip

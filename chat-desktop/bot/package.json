@@ -1,0 +1,20 @@
+{
+  "name": "stream-chat-bot",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Чат-бот для стримов на Twitch: команды, автосообщения, модерация, баллы, розыгрыши, викторина и уведомления в Telegram",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "demo": "node src/index.js --demo",
+    "auth:twitch": "node src/auth-twitch.js",
+    "auth:youtube": "node src/auth-youtube.js",
+    "alerts": "node src/stream-alerts.js",
+    "alerts:test": "node src/stream-alerts.js --test",
+    "alerts:check": "node src/stream-alerts.js --check",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

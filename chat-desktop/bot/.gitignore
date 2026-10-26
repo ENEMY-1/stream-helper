@@ -1,0 +1,9 @@
+# Секреты и рабочие файлы — не выкладывать
+data/tokens.json
+data/google-oauth.json
+data/state.json
+data/quota.json
+data/bot.log
+data/bot.log.1
+
+node_modules/

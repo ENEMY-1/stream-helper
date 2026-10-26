@@ -1,0 +1,1172 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Multi-chat overlay для OBS</title>
+<style>
+  :root {
+    --font-size: 26px;
+    --gap: calc(var(--font-size) * 0.32);
+    --pad: calc(var(--font-size) * 0.62);
+    --bg: rgba(10, 10, 14, var(--bg-opacity, 0.58));
+    --fg: #f4f4f7;
+    --name: #c9b3ff;
+    --name-twitch: #bf94ff;
+    --name-youtube: #ff8b98;
+    --name-kick: #a8ff86;
+    --radius: calc(var(--font-size) * 0.46);
+    --msg-bg: var(--bg);
+    --msg-pad-y: 0.22;
+    --msg-pad-x: 0.5;
+    --msg-shadow: inset 3px 0 0 0 var(--accent, transparent);
+    --msg-border: 0 solid transparent;
+    --msg-blur: none;
+    --body-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    height: 100%;
+    margin: 0;
+    background: transparent;
+    overflow: hidden;
+  }
+
+  body {
+    color: var(--fg);
+    font-family: "Segoe UI", system-ui, -apple-system, "Inter", Roboto, Arial, sans-serif;
+    font-size: var(--font-size);
+    line-height: 1.32;
+    -webkit-font-smoothing: antialiased;
+    text-shadow: var(--body-shadow);
+  }
+
+  #chat {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: var(--gap);
+    padding: var(--pad);
+    overflow: hidden;
+  }
+
+  #chat.align-top { justify-content: flex-start; }
+
+  .msg {
+    width: fit-content;
+    max-width: 100%;
+    padding: calc(var(--font-size) * var(--msg-pad-y)) calc(var(--font-size) * var(--msg-pad-x));
+    background: var(--msg-bg);
+    border: var(--msg-border);
+    border-radius: var(--radius);
+    box-shadow: var(--msg-shadow);
+    backdrop-filter: var(--msg-blur);
+    -webkit-backdrop-filter: var(--msg-blur);
+    overflow-wrap: anywhere;
+    animation: msg-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    transform-origin: bottom left;
+  }
+
+  @keyframes msg-in {
+    from { opacity: 0; transform: translateY(12px) scale(0.97); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  .msg.p-twitch { --accent: #9146ff; --accent-soft: rgba(145, 70, 255, 0.55); }
+  .msg.p-youtube { --accent: #ff0033; --accent-soft: rgba(255, 0, 51, 0.55); }
+  .msg.p-kick { --accent: #53fc18; --accent-soft: rgba(83, 252, 24, 0.5); }
+  .msg.p-demo { --accent: #3ea6ff; --accent-soft: rgba(62, 166, 255, 0.55); }
+
+  .name {
+    font-weight: 700;
+    color: var(--name);
+    white-space: pre;
+  }
+  .p-twitch .name  { color: var(--name-twitch); }
+  .p-youtube .name { color: var(--name-youtube); }
+  .p-kick .name    { color: var(--name-kick); }
+
+  .sep { opacity: 0.75; font-weight: 600; }
+
+  .text { color: var(--fg); }
+
+  .emote {
+    height: 1.35em;
+    margin: 0 1px;
+    vertical-align: middle;
+    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.4));
+  }
+
+  .tag {
+    display: inline-block;
+    margin-right: 0.45em;
+    padding: 0 0.35em;
+    border-radius: 0.3em;
+    font-size: 0.52em;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    line-height: 1.7;
+    vertical-align: 0.18em;
+    text-transform: uppercase;
+    color: #fff;
+    background: var(--accent, #555);
+    opacity: 0.9;
+  }
+
+  /* Обёртка «кто написал»: плашка, иконка платформы, бейджи и ник.
+     В обычных темах ведёт себя как строчный элемент и ничего не меняет. */
+  .who { display: inline; }
+  .picon, .badges { display: none; }
+
+  .badge {
+    display: block;
+    height: 0.95em;
+    width: auto;
+    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.55));
+  }
+
+  /* ---------------------------------------------------------------------
+     Темы оформления. Класс theme-* ставится на <html> в скрипте ниже.
+     --------------------------------------------------------------------- */
+
+  /* Стекло: полупрозрачные карточки с размытием и светлым контуром. */
+  html.theme-glass {
+    --bg: rgba(14, 17, 28, var(--bg-opacity, 0.58));
+    --radius: calc(var(--font-size) * 0.62);
+    --msg-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.03)), var(--bg);
+    --msg-border: 1px solid rgba(255, 255, 255, 0.18);
+    --msg-blur: blur(10px) saturate(1.15);
+    --msg-shadow: 0 8px 28px rgba(0, 0, 0, 0.26), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+    --body-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  }
+
+  /* Неон: тёмные плашки со свечением в цвет платформы. */
+  html.theme-neon {
+    --bg: rgba(8, 6, 20, var(--bg-opacity, 0.58));
+    --fg: #f7f3ff;
+    --name: #e0d0ff;
+    --name-twitch: #d3a2ff;
+    --name-youtube: #ff9eaf;
+    --name-kick: #c1ff9d;
+    --radius: calc(var(--font-size) * 0.32);
+    --msg-bg: var(--bg);
+    --msg-border: 1px solid var(--accent, #a970ff);
+    --msg-shadow: 0 0 14px var(--accent-soft, rgba(169, 112, 255, 0.35)),
+                  inset 0 0 12px rgba(255, 255, 255, 0.03);
+  }
+
+  /* Светлая: белые карточки и тёмный текст. */
+  html.theme-soft {
+    --bg: rgba(255, 255, 255, var(--bg-opacity, 0.58));
+    --fg: #1a1f2e;
+    --name: #4b2fa8;
+    --name-twitch: #6a3bd0;
+    --name-youtube: #c01e42;
+    --name-kick: #23772b;
+    --radius: calc(var(--font-size) * 0.5);
+    --msg-bg: var(--bg);
+    --msg-border: 1px solid rgba(20, 25, 45, 0.07);
+    --msg-shadow: 0 5px 18px rgba(10, 15, 35, 0.16);
+    --body-shadow: none;
+  }
+
+  html.theme-soft .emote {
+    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.18));
+  }
+
+  /* На светлой теме приглушаем яркие цвета ников, чтобы они читались. */
+  html.theme-soft .name {
+    filter: brightness(0.45) saturate(1.2);
+  }
+
+  /* Минимализм: без плашек, только текст и тонкая цветная полоса. */
+  html.theme-minimal {
+    --bg: transparent;
+    --fg: #ffffff;
+    --name: #ffffff;
+    --name-twitch: #d8c2ff;
+    --name-youtube: #ffc2c9;
+    --name-kick: #d2ffbf;
+    --radius: 0;
+    --msg-bg: transparent;
+    --msg-pad-y: 0.08;
+    --msg-pad-x: 0;
+    --msg-shadow: none;
+    --msg-border: 0 solid transparent;
+    --body-shadow: 0 1px 3px rgba(0, 0, 0, 0.95), 0 0 2px rgba(0, 0, 0, 0.9);
+    --gap: calc(var(--font-size) * 0.2);
+    --pad: calc(var(--font-size) * 0.35);
+  }
+
+  html.theme-minimal .msg {
+    border-left: 3px solid var(--accent, #888);
+    padding-left: calc(var(--font-size) * 0.35);
+  }
+
+  html.theme-minimal .tag {
+    background: transparent;
+    color: var(--accent, #fff);
+    border: 1px solid var(--accent, #fff);
+    opacity: 1;
+  }
+
+  /* Streamlabs-style: колонка с ником справа, сообщение слева,
+     иконки платформ и бейджи, тени текста, прозрачный фон. */
+  html.theme-streamlabs {
+    --bg: transparent;
+    --fg: #ffffff;
+    --name: #ffffff;
+    --name-twitch: #c9a7ff;
+    --name-youtube: #ff9aa6;
+    --name-kick: #b6ff9a;
+    --radius: 0;
+    --msg-bg: transparent;
+    --msg-pad-y: 0.05;
+    --msg-pad-x: 0;
+    --msg-shadow: none;
+    --msg-border: 0 solid transparent;
+    --body-shadow: none;
+    --gap: calc(var(--font-size) * 0.1);
+    --pad: calc(var(--font-size) * 0.4);
+  }
+
+  html.theme-streamlabs .msg {
+    display: flex;
+    align-items: baseline;
+    gap: calc(var(--font-size) * 0.45);
+    padding: calc(var(--font-size) * 0.04) 0;
+    max-width: 100%;
+    width: 100%;
+    animation: sl-msg-in 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+
+  @keyframes sl-msg-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  html.theme-streamlabs .who {
+    display: block;
+    flex: 0 0 36%;
+    max-width: 36%;
+    min-width: 0;
+    text-align: right;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.35;
+  }
+
+  html.theme-streamlabs .tag { display: none; }
+
+  /* Иконка платформы перед ником. */
+  html.theme-streamlabs .picon {
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    margin: 0 0.18em;
+    vertical-align: -0.1em;
+    background: center / contain no-repeat;
+  }
+
+  html.theme-streamlabs .picon-twitch {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%239146ff' d='M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z'/%3E%3C/svg%3E");
+  }
+
+  html.theme-streamlabs .picon-youtube {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23ff0033' d='M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z'/%3E%3C/svg%3E");
+  }
+
+  html.theme-streamlabs .picon-kick {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%2353fc18'/%3E%3Cpath fill='%230b0f0a' d='M7 5h3v5.1L15.6 5H19l-5.9 6.5L19.4 19H16l-4.4-5.2L10 15.3V19H7z'/%3E%3C/svg%3E");
+  }
+
+  /* Бейджи (модератор, VIP, саб и т.п.). */
+  html.theme-streamlabs .badges {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.12em;
+    margin: 0 0.12em;
+    vertical-align: -0.08em;
+  }
+
+  html.theme-streamlabs .name {
+    font-weight: 700;
+    color: var(--name);
+    filter: saturate(1.25);
+    text-shadow:
+      0 0 1px rgba(0,0,0,0.9),
+      0 1px 2px rgba(0,0,0,0.95),
+      0 2px 4px rgba(0,0,0,0.7);
+  }
+
+  html.theme-streamlabs .sep { display: none; }
+
+  html.theme-streamlabs .text {
+    flex: 1 1 auto;
+    min-width: 0;
+    color: var(--fg);
+    font-weight: 700;
+    text-shadow:
+      0 0 1px rgba(0,0,0,0.9),
+      0 1px 2px rgba(0,0,0,0.9),
+      0 0 6px rgba(0,0,0,0.45);
+    line-height: 1.35;
+    word-wrap: break-word;
+    overflow-wrap: anywhere;
+  }
+
+  html.theme-streamlabs .emote {
+    height: 1.2em;
+    margin: 0 1px;
+    vertical-align: -0.2em;
+    filter: drop-shadow(0 1px 1px rgba(0,0,0,0.7));
+  }
+
+  #status {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    right: 6px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.75);
+    color: #7dffa8;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    display: none;
+  }
+
+  #status.visible { display: block; }
+  #status:empty { display: none; }
+</style>
+</head>
+<body>
+  <div id="chat"></div>
+  <div id="status"></div>
+
+  <!-- Настройки: config.js — значения по умолчанию, overlay-settings.js —
+       то, что сохранили в окне «Настройки» (главнее config.js). -->
+  <script src="config.js"></script>
+  <script src="overlay-settings.js"></script>
+
+  <script>
+  (function () {
+    'use strict';
+
+    // ---------------------------------------------------------------------
+    // 1. Настройки: config.js + overlay-settings.js + параметры в адресе
+    //    (адрес важнее всего, overlay-settings.js важнее config.js)
+    // ---------------------------------------------------------------------
+    var configFile = window.CHAT_CONFIG || {};
+    var settingsFile = window.CHAT_USER_SETTINGS || {};
+
+    function isObject(value) {
+      return !!value && typeof value === 'object' && !Array.isArray(value);
+    }
+
+    function mergeConfig(base, extra) {
+      var out = {};
+      Object.keys(base || {}).forEach(function (key) { out[key] = base[key]; });
+      Object.keys(extra || {}).forEach(function (key) {
+        if (isObject(out[key]) && isObject(extra[key])) {
+          out[key] = mergeConfig(out[key], extra[key]);
+        } else {
+          out[key] = extra[key];
+        }
+      });
+      return out;
+    }
+
+    var base = mergeConfig(configFile, settingsFile);
+    var q = new URLSearchParams(location.search);
+
+    function list(value) {
+      return (value || '').split(',')
+        .map(function (s) { return s.trim().replace(/^[@#]/, ''); })
+        .filter(Boolean);
+    }
+    function num(value, fallback) {
+      var n = parseFloat(value);
+      return isFinite(n) ? n : fallback;
+    }
+    function bool(value, fallback) {
+      if (value === null || value === undefined || value === '') return fallback;
+      return !(value === '0' || value === 'false' || value === 'off');
+    }
+
+    var THEMES = ['classic', 'glass', 'neon', 'soft', 'minimal', 'streamlabs'];
+    var themeValue = String(q.get('theme') || base.theme || 'classic').toLowerCase();
+
+    var CONFIG = {
+      twitch: q.has('twitch') ? list(q.get('twitch')) : (base.twitch || []),
+      kick: q.has('kick') ? list(q.get('kick')) : (base.kick || []),
+      youtubeId: q.has('youtube') ? q.get('youtube').trim()
+        : ((base.youtube && base.youtube.videoId) || ''),
+      youtubeChannel: q.has('ytchannel') ? q.get('ytchannel').trim()
+        : ((base.youtube && base.youtube.channelId) || ''),
+      youtubeKey: q.has('ytkey') ? q.get('ytkey').trim()
+        : ((base.youtube && base.youtube.apiKey) || ''),
+      youtubeRelay: q.has('relay') ? bool(q.get('relay'), true)
+        : (base.youtube && base.youtube.relay) !== false,
+      youtubeRelayUrl: (base.youtube && base.youtube.relayUrl) || 'http://127.0.0.1:38999',
+      youtubePollMs: Math.max(5000, num(q.get('poll'), (base.youtube && base.youtube.pollMs) || 12000)),
+      maxMessages: Math.max(1, Math.min(100, num(q.get('limit'), base.maxMessages || 18))),
+      fontSize: Math.max(10, Math.min(72, num(q.get('size'), base.fontSize || 26))),
+      bgOpacity: Math.max(0, Math.min(100, num(q.get('opacity'), base.bgOpacity != null ? base.bgOpacity : 58))),
+      showPlatform: bool(q.get('platform'), base.showPlatform !== false),
+      theme: THEMES.indexOf(themeValue) !== -1 ? themeValue : 'classic',
+      alignTop: (q.get('align') || base.align) === 'top',
+      demo: q.get('demo') === '1' || base.demo === true,
+      debug: q.get('debug') === '1' || base.debug === true
+    };
+
+    document.documentElement.style.setProperty('--font-size', CONFIG.fontSize + 'px');
+    document.documentElement.style.setProperty('--bg-opacity', String(CONFIG.bgOpacity / 100));
+    document.documentElement.classList.add('theme-' + CONFIG.theme);
+
+    var chatEl = document.getElementById('chat');
+    var statusEl = document.getElementById('status');
+    if (CONFIG.alignTop) chatEl.classList.add('align-top');
+    if (CONFIG.debug) statusEl.classList.add('visible');
+
+    var PLATFORM_LABEL = { twitch: 'twitch', youtube: 'youtube', kick: 'kick', demo: 'demo' };
+
+    // ---------------------------------------------------------------------
+    // 2. Вывод сообщений
+    // ---------------------------------------------------------------------
+    var seen = new Set();
+    var seenOrder = [];
+
+    function remember(id) {
+      if (!id) return true;
+      if (seen.has(id)) return false;
+      seen.add(id);
+      seenOrder.push(id);
+      if (seenOrder.length > 3000) seen.delete(seenOrder.shift());
+      return true;
+    }
+
+    function esc(value) {
+      return String(value).replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+      });
+    }
+
+    // стабильный цвет ника по строке (у YouTube нет своих цветов)
+    function colorFromId(value) {
+      var hash = 0;
+      var str = String(value || '');
+      for (var i = 0; i < str.length; i++) {
+        hash = (hash * 31 + str.charCodeAt(i)) % 360;
+      }
+      return 'hsl(' + hash + ', 72%, 74%)';
+    }
+
+    // --- бейджи YouTube (владелец, модератор, спонсор) ---
+    function svgData(svg) {
+      return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    }
+
+    var BADGE_SVG = {
+      owner: svgData("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='#ffd54a' stroke='#8a6500' stroke-width='1' d='M3 18.5h18l-1.6-8.6-4.6 3.2L12 6.4 9.2 13.1 4.6 9.9z'/></svg>"),
+      moderator: svgData("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='#4aa3ff' stroke='#0b3d75' stroke-width='1' d='M12 2.5l7 2.6v6.2c0 4.3-3 7.7-7 9.2-4-1.5-7-4.9-7-9.2V5.1z'/><path fill='#fff' d='M8.4 11.8l2.4 2.4 4.8-4.8 1.5 1.5-6.3 6.3-3.9-3.9z'/></svg>"),
+      member: svgData("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='#37d67a' stroke='#0d5c2f' stroke-width='1' d='M12 2.6l2.9 5.9 6.5.9-4.7 4.5 1.1 6.4-5.8-3-5.8 3 1.1-6.4L2.6 9.4l6.5-.9z'/></svg>")
+    };
+
+    function youtubeBadges(author) {
+      var out = [];
+      if (!author) return out;
+      if (author.isChatOwner) out.push(BADGE_SVG.owner);
+      else if (author.isChatModerator) out.push(BADGE_SVG.moderator);
+      if (author.isChatSponsor) out.push(BADGE_SVG.member);
+      return out;
+    }
+
+    // --- бейджи Twitch: глобальные + канальные (сабы), грузим один раз ---
+    var twitchGlobalBadges = null;
+    var twitchGlobalLoading = false;
+    var twitchChannelBadges = {};
+
+    function fetchJson(url) {
+      return fetch(url).then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      }).catch(function () { return null; });
+    }
+
+    function ensureTwitchBadges(roomId) {
+      if (!twitchGlobalBadges && !twitchGlobalLoading) {
+        twitchGlobalLoading = true;
+        fetchJson('https://badges.twitch.tv/v1/badges/global/display').then(function (data) {
+          twitchGlobalBadges = (data && data.badge_sets) || {};
+        });
+      }
+      if (roomId && !twitchChannelBadges[roomId]) {
+        twitchChannelBadges[roomId] = { sets: {} };
+        fetchJson('https://badges.twitch.tv/v1/badges/channels/' +
+          encodeURIComponent(roomId) + '/display').then(function (data) {
+          twitchChannelBadges[roomId].sets = (data && data.badge_sets) || {};
+        });
+      }
+    }
+
+    function twitchBadges(tags) {
+      var roomId = tags['room-id'] || '';
+      ensureTwitchBadges(roomId);
+      var sets = (roomId && twitchChannelBadges[roomId] && twitchChannelBadges[roomId].sets) || {};
+      var out = [];
+      String(tags.badges || '').split(',').forEach(function (entry) {
+        var parts = entry.split('/');
+        if (parts.length < 2) return;
+        var set = sets[parts[0]] || (twitchGlobalBadges && twitchGlobalBadges[parts[0]]);
+        var version = set && set.versions && set.versions[parts[1]];
+        if (version && version.image_url_1x) out.push(version.image_url_1x);
+      });
+      return out;
+    }
+
+    function addMessage(m) {
+      if (!m || !m.html) return;
+      if (!remember(m.id)) return;
+
+      var row = document.createElement('div');
+      row.className = 'msg p-' + (m.platform || 'generic');
+
+      var who = document.createElement('span');
+      who.className = 'who';
+
+      if (CONFIG.showPlatform && PLATFORM_LABEL[m.platform]) {
+        var tag = document.createElement('span');
+        tag.className = 'tag';
+        tag.textContent = PLATFORM_LABEL[m.platform];
+        who.appendChild(tag);
+
+        if (m.platform === 'twitch' || m.platform === 'youtube' || m.platform === 'kick') {
+          var icon = document.createElement('span');
+          icon.className = 'picon picon-' + m.platform;
+          who.appendChild(icon);
+        }
+      }
+
+      if (m.badges && m.badges.length) {
+        var badges = document.createElement('span');
+        badges.className = 'badges';
+        m.badges.slice(0, 4).forEach(function (url) {
+          var img = document.createElement('img');
+          img.className = 'badge';
+          img.src = url;
+          img.alt = '';
+          badges.appendChild(img);
+        });
+        who.appendChild(badges);
+      }
+
+      var name = document.createElement('span');
+      name.className = 'name';
+      name.textContent = m.user || '';
+      if (m.color) name.style.color = m.color;
+      who.appendChild(name);
+
+      var sep = document.createElement('span');
+      sep.className = 'sep';
+      sep.textContent = ': ';
+
+      var text = document.createElement('span');
+      text.className = 'text';
+      text.innerHTML = m.html;
+
+      row.appendChild(who);
+      row.appendChild(sep);
+      row.appendChild(text);
+      chatEl.appendChild(row);
+
+      while (chatEl.children.length > CONFIG.maxMessages) {
+        chatEl.removeChild(chatEl.firstElementChild);
+      }
+    }
+
+    // ---------------------------------------------------------------------
+    // 3. Статус (виден при ?debug=1)
+    // ---------------------------------------------------------------------
+    var statusState = {};
+    function setStatus(platform, text) {
+      statusState[platform] = text;
+      if (!CONFIG.debug) return;
+      statusEl.textContent = Object.keys(statusState).map(function (key) {
+        return key + ': ' + statusState[key];
+      }).join('\n');
+    }
+
+    // ---------------------------------------------------------------------
+    // 4. Twitch (анонимный IRC, без токенов)
+    // ---------------------------------------------------------------------
+    function unescapeTag(value) {
+      return value.replace(/\\(.)/g, function (_, c) {
+        return { s: ' ', ':': ';', '\\': '\\', r: '\r', n: '\n' }[c] || c;
+      });
+    }
+
+    function parseIrcLine(line) {
+      var out = { tags: {}, prefix: null, command: null, params: [] };
+      var rest = line;
+
+      if (rest.charAt(0) === '@') {
+        var sp = rest.indexOf(' ');
+        if (sp < 0) return null;
+        rest.slice(1, sp).split(';').forEach(function (pair) {
+          var eq = pair.indexOf('=');
+          var key = eq < 0 ? pair : pair.slice(0, eq);
+          var val = eq < 0 ? '' : pair.slice(eq + 1);
+          out.tags[key] = unescapeTag(val);
+        });
+        rest = rest.slice(sp + 1);
+      }
+
+      if (rest.charAt(0) === ':') {
+        var sp2 = rest.indexOf(' ');
+        if (sp2 < 0) return null;
+        out.prefix = rest.slice(1, sp2);
+        rest = rest.slice(sp2 + 1);
+      }
+
+      var sp3 = rest.indexOf(' ');
+      var trailing = null;
+      if (sp3 < 0) {
+        out.command = rest;
+      } else {
+        out.command = rest.slice(0, sp3);
+        rest = rest.slice(sp3 + 1);
+        if (rest.charAt(0) === ':') {
+          trailing = rest.slice(1);
+          rest = '';
+        } else {
+          var ti = rest.indexOf(' :');
+          if (ti >= 0) {
+            trailing = rest.slice(ti + 2);
+            rest = rest.slice(0, ti);
+          }
+        }
+        out.params = rest ? rest.split(' ') : [];
+        if (trailing !== null) out.params.push(trailing);
+      }
+
+      var pm = /^([^!@]+)/.exec(out.prefix || '');
+      out.prefixUser = pm ? pm[1] : null;
+      return out;
+    }
+
+    function twitchHtml(text, emotesTag) {
+      if (!emotesTag) return esc(text);
+
+      var chars = Array.from(text);           // индексы Twitch считаются в кодпоинтах
+      var slots = [];
+
+      emotesTag.split('/').forEach(function (chunk) {
+        var parts = chunk.split(':');
+        if (parts.length < 2) return;
+        parts[1].split(',').forEach(function (range) {
+          var bounds = range.split('-');
+          var start = parseInt(bounds[0], 10);
+          var end = parseInt(bounds[1], 10);
+          if (isFinite(start) && isFinite(end)) {
+            slots.push({ start: start, end: end, id: parts[0] });
+          }
+        });
+      });
+
+      slots.sort(function (a, b) { return a.start - b.start; });
+
+      var html = '';
+      var cursor = 0;
+      slots.forEach(function (slot) {
+        if (slot.start < cursor) return;
+        html += esc(chars.slice(cursor, slot.start).join(''));
+        var name = chars.slice(slot.start, slot.end + 1).join('');
+        html += '<img class="emote" src="https://static-cdn.jtvnw.net/emoticons/v2/' +
+          encodeURIComponent(slot.id) + '/default/dark/1.0" alt="' + esc(name) +
+          '" title="' + esc(name) + '">';
+        cursor = slot.end + 1;
+      });
+      html += esc(chars.slice(cursor).join(''));
+      return html;
+    }
+
+    function connectTwitch(channels) {
+      if (!channels.length) return;
+
+      var tries = 0;
+
+      function open() {
+        var ws;
+        setStatus('twitch', 'подключение…');
+        try {
+          ws = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
+        } catch (e) {
+          schedule();
+          return;
+        }
+
+        ws.onopen = function () {
+          tries = 0;
+          ws.send('CAP REQ :twitch.tv/tags twitch.tv/commands');
+          ws.send('PASS SCHMOOPIIE');
+          ws.send('NICK justinfan' + (10000 + Math.floor(Math.random() * 89000)));
+          channels.forEach(function (channel) {
+            ws.send('JOIN #' + channel.toLowerCase());
+          });
+          setStatus('twitch', 'ok');
+        };
+
+        ws.onmessage = function (event) {
+          String(event.data).split('\r\n').forEach(function (line) {
+            if (!line) return;
+            if (line.indexOf('PING') === 0) {
+              ws.send('PONG :tmi.twitch.tv');
+              return;
+            }
+            var msg = parseIrcLine(line);
+            if (!msg || msg.command !== 'PRIVMSG') return;
+
+            var channel = (msg.params[0] || '').replace('#', '');
+            var text = msg.params[1] || '';
+            var tags = msg.tags || {};
+            var user = tags['display-name'] || msg.prefixUser || 'twitch';
+
+            addMessage({
+              platform: 'twitch',
+              user: user,
+              color: tags.color || '',
+              html: twitchHtml(text, tags.emotes),
+              badges: twitchBadges(tags),
+              id: tags.id || ('twitch:' + channel + ':' + user + ':' + text + ':' + Date.now())
+            });
+          });
+        };
+
+        ws.onerror = function () {
+          try { ws.close(); } catch (e) { /* ignore */ }
+        };
+
+        ws.onclose = function () {
+          setStatus('twitch', 'переподключение…');
+          schedule();
+        };
+      }
+
+      function schedule() {
+        var delay = Math.min(30000, 2000 * Math.pow(2, Math.min(tries++, 4)));
+        setTimeout(open, delay);
+      }
+
+      open();
+    }
+
+    // ---------------------------------------------------------------------
+    // 5. Kick (неофициальный Pusher-канал, может потребовать VPN/не работать)
+    // ---------------------------------------------------------------------
+    function kickHtml(content) {
+      var html = esc(content || '');
+      return html.replace(/\[emote:(\d+):([^\]]+)\]/g, function (_, id, name) {
+        return '<img class="emote" src="https://files.kick.com/emotes/' +
+          encodeURIComponent(id) + '/fullsize" alt="' + esc(name) +
+          '" title="' + esc(name) + '">';
+      });
+    }
+
+    function connectKick(slugs) {
+      if (!slugs.length) return;
+
+      var PUSHER = 'wss://ws-us2.pusher.com/app/32cbd69e4b950bf97679' +
+        '?protocol=7&client=js&version=8.4.0&flash=false';
+
+      setStatus('kick', 'загрузка каналов…');
+      var rooms = [];
+
+      Promise.all(slugs.map(function (slug) {
+        return fetch('https://kick.com/api/v2/channels/' + encodeURIComponent(slug.toLowerCase()))
+          .then(function (r) {
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.json();
+          })
+          .then(function (data) {
+            var id = (data && data.chatroom && data.chatroom.id) || (data && data.id);
+            if (!id) throw new Error('chatroom не найден');
+            rooms.push({ slug: slug, id: id });
+          })
+          .catch(function (error) {
+            setStatus('kick', 'ошибка: ' + error.message);
+          });
+      })).then(function () {
+        if (!rooms.length) return;
+
+        var ws = null;
+        var tries = 0;
+        var pingTimer = null;
+
+        function open() {
+          ws = new WebSocket(PUSHER);
+
+          ws.onopen = function () {
+            tries = 0;
+            rooms.forEach(function (room) {
+              ws.send(JSON.stringify({
+                event: 'pusher:subscribe',
+                data: { auth: '', channel: 'chatrooms.' + room.id + '.v2' }
+              }));
+            });
+            setStatus('kick', 'ok');
+            clearInterval(pingTimer);
+            pingTimer = setInterval(function () {
+              try { ws.send(JSON.stringify({ event: 'pusher:ping', data: {} })); } catch (e) { /* ignore */ }
+            }, 120000);
+          };
+
+          ws.onmessage = function (event) {
+            var data;
+            try { data = JSON.parse(event.data); } catch (e) { return; }
+
+            if (data.event === 'pusher:ping') {
+              ws.send(JSON.stringify({ event: 'pusher:pong', data: {} }));
+              return;
+            }
+            if (!data.event || data.event.indexOf('ChatMessageEvent') < 0) return;
+
+            var info;
+            try { info = JSON.parse(data.data); } catch (e) { return; }
+
+            var sender = info.sender || {};
+            var kickIdentity = sender.identity || {};
+            var kickBadges = (kickIdentity.badges || []).map(function (badge) {
+              return badge && badge.image_url;
+            }).filter(Boolean);
+            addMessage({
+              platform: 'kick',
+              user: sender.username || 'kick',
+              color: kickIdentity.color || '',
+              html: kickHtml(info.content),
+              badges: kickBadges,
+              id: 'kick:' + (info.id || (sender.username + ':' + info.content + ':' + info.created_at))
+            });
+          };
+
+          ws.onclose = function () {
+            clearInterval(pingTimer);
+            setStatus('kick', 'переподключение…');
+            var delay = Math.min(30000, 2000 * Math.pow(2, Math.min(tries++, 4)));
+            setTimeout(open, delay);
+          };
+
+          ws.onerror = function () {
+            try { ws.close(); } catch (e) { /* ignore */ }
+          };
+        }
+
+        open();
+      });
+    }
+
+    // ---------------------------------------------------------------------
+    // 6. YouTube (нужен API-ключ YouTube Data API v3)
+    // ---------------------------------------------------------------------
+    function connectYouTube(cfg) {
+      var apiKey = cfg.apiKey;
+      var fixedVideoId = cfg.videoId || '';
+      var channel = cfg.channelId || '';
+
+      var relayEnabled = cfg.relay !== false;
+      var relayUrl = cfg.relayUrl || 'http://127.0.0.1:38999';
+      var minPollMs = Math.max(5000, cfg.pollMs || 15000);
+
+      if (!apiKey && !relayEnabled) {
+        if (fixedVideoId || channel) setStatus('youtube', 'нужен API-ключ');
+        return;
+      }
+      if (!fixedVideoId && !channel && !relayEnabled) return;
+
+      setStatus('youtube', 'подключение…');
+
+      if (relayEnabled) startRelay(); else startDirect();
+
+      // --- сообщения раздаёт приложение для игры (один опрос на два окна) ---
+      function startRelay() {
+        var since = 0;
+        var relayFails = 0;
+        var relayStarted = null;
+
+        // Сообщения уже приходят в приложение без задержек и без квоты,
+        // поэтому локальный релей можно опрашивать почти мгновенно.
+        var RELAY_TICK_MS = 700;
+
+        function tick() {
+          var controller = typeof AbortController === 'function' ? new AbortController() : null;
+          var abortTimer = controller ? setTimeout(function () { controller.abort(); }, 6000) : null;
+
+          function done() {
+            if (abortTimer) clearTimeout(abortTimer);
+          }
+
+          fetch(relayUrl + '/yt/feed?since=' + since + '&_=' + Date.now(), {
+            cache: 'no-store',
+            signal: controller ? controller.signal : undefined
+          })
+            .then(function (r) {
+              if (!r.ok) throw new Error('relay ' + r.status);
+              return r.json();
+            })
+            .then(function (data) {
+              done();
+              relayFails = 0;
+              if (data.started && data.started !== relayStarted) {
+                relayStarted = data.started;
+                since = 0;
+                setTimeout(tick, 100);
+                return;
+              }
+              (data.messages || []).forEach(function (m) {
+                addMessage({
+                  platform: 'youtube',
+                  user: m.user,
+                  color: colorFromId(m.seed || m.user || ''),
+                  html: esc(m.text || ''),
+                  id: m.id
+                });
+              });
+              if (typeof data.seq === 'number') since = data.seq;
+
+              var origin = data.source === 'api' ? ' · api' : '';
+              if (data.status === 'ok') setStatus('youtube', 'ok' + origin);
+              else if (data.status === 'off') setStatus('youtube', 'выключен' + (data.error ? ': ' + data.error : ''));
+              else if (data.status === 'wait' || /не в эфире/.test(data.error || '')) setStatus('youtube', 'ищем эфир…');
+              else if (data.error) setStatus('youtube', 'ошибка: ' + data.error);
+              setTimeout(tick, RELAY_TICK_MS);
+            })
+            .catch(function () {
+              done();
+              relayFails++;
+              if (relayFails >= 15) { setStatus('youtube', 'прямое подключение…'); startDirect(); return; }
+              setTimeout(tick, 2500);
+            });
+        }
+
+        tick();
+      }
+
+      // --- напрямую в YouTube API (когда приложение не запущено) ---
+      function startDirect() {
+      if (!apiKey) { setStatus('youtube', 'нужен API-ключ'); return; }
+      var videoId = fixedVideoId;
+      var liveChatId = null;
+      var pageToken = null;
+      var first = true;
+      var fails = 0;
+
+      function api(path, params) {
+        var query = new URLSearchParams();
+        query.set('key', apiKey);
+        Object.keys(params).forEach(function (key) { query.set(key, params[key]); });
+        return fetch('https://www.googleapis.com/youtube/v3/' + path + '?' + query.toString())
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            if (data.error) throw new Error(data.error.message);
+            return data;
+          });
+      }
+
+      // если задан канал, а не ссылка — ищем текущий эфир канала.
+      // Важно: не через search.list (у него лимит 100 запросов в день на проект),
+      // а через плейлист загрузок канала — он дешёвый и всегда актуален.
+      function resolveVideoId() {
+        if (videoId) return Promise.resolve(videoId);
+
+        var channelPromise;
+        if (/^UC[\w-]{20,}$/.test(channel)) {
+          channelPromise = Promise.resolve(channel);
+        } else {
+          var handle = channel.charAt(0) === '@' ? channel : '@' + channel;
+          channelPromise = api('channels', { part: 'id', forHandle: handle }).then(function (data) {
+            var item = (data.items || [])[0];
+            if (!item) throw new Error('канал ' + handle + ' не найден');
+            return item.id;
+          });
+        }
+
+        return channelPromise.then(function (channelId) {
+          return api('channels', { part: 'contentDetails', id: channelId });
+        }).then(function (data) {
+          var item = (data.items || [])[0];
+          var uploads = item && item.contentDetails && item.contentDetails.relatedPlaylists &&
+            item.contentDetails.relatedPlaylists.uploads;
+          if (!uploads) throw new Error('канал не найден');
+          return api('playlistItems', {
+            part: 'contentDetails',
+            playlistId: uploads,
+            maxResults: 10
+          });
+        }).then(function (list) {
+          var ids = (list.items || []).map(function (it) {
+            return it.contentDetails && it.contentDetails.videoId;
+          }).filter(Boolean);
+          if (!ids.length) throw new Error('канал не в эфире');
+          return api('videos', {
+            part: 'liveStreamingDetails',
+            id: ids.join(',')
+          });
+        }).then(function (data) {
+          var live = (data.items || []).filter(function (item) {
+            var details = item.liveStreamingDetails || {};
+            return details.activeLiveChatId && details.actualStartTime && !details.actualEndTime;
+          })[0];
+          if (!live) throw new Error('канал не в эфире');
+          videoId = live.id;
+          return videoId;
+        });
+      }
+
+      function resolveChatId() {
+        return resolveVideoId().then(function (id) {
+          return api('videos', { part: 'liveStreamingDetails', id: id });
+        }).then(function (data) {
+          var item = (data.items || [])[0];
+          var id = item && item.liveStreamingDetails && item.liveStreamingDetails.activeLiveChatId;
+          if (!id) throw new Error('чат недоступен (эфир не идёт?)');
+          return id;
+        });
+      }
+
+      function schedule(delay) {
+        setTimeout(poll, delay);
+      }
+
+      function poll() {
+        var chain = liveChatId ? Promise.resolve(liveChatId) : resolveChatId();
+
+        chain.then(function (id) {
+          liveChatId = id;
+          var params = {
+            liveChatId: id,
+            part: 'snippet,authorDetails',
+            maxResults: 200
+          };
+          if (pageToken) params.pageToken = pageToken;
+          return api('liveChat/messages', params);
+        }).then(function (data) {
+          var items = data.items || [];
+          var batch = first ? items.slice(-Math.min(items.length, 8)) : items;
+          first = false;
+
+          batch.forEach(function (item) {
+            var snippet = item.snippet || {};
+            var author = item.authorDetails || {};
+            addMessage({
+              platform: 'youtube',
+              user: author.displayName || 'youtube',
+              color: colorFromId(author.channelId || author.displayName),
+              html: esc(snippet.displayMessage || ''),
+              badges: youtubeBadges(author),
+              id: item.id
+            });
+          });
+
+          if (data.nextPageToken) pageToken = data.nextPageToken;
+          fails = 0;
+          setStatus('youtube', 'ok');
+          schedule(Math.max(minPollMs, data.pollingIntervalMillis || minPollMs));
+        }).catch(function (error) {
+          fails++;
+          setStatus('youtube', 'ошибка: ' + error.message);
+          if (fails >= 3) {
+            liveChatId = null;
+            pageToken = null;
+            videoId = fixedVideoId;
+            first = true;
+          }
+          schedule(fails > 4 ? 60000 : Math.min(30000, 3000 * fails));
+        });
+      }
+
+      poll();
+      }
+    }
+
+    // ---------------------------------------------------------------------
+    // 7. Демо-режим (проверка внешнего вида без чата)
+    // ---------------------------------------------------------------------
+    function startDemo() {
+      var users = ['nordwind', 'Kisa', 'mega_boss', 'Алёна', 'twitchy', 'gopnik_228',
+        'LunarFox', 'Дядя Вова', 'pixel_lord', 'Katya'];
+      var texts = [
+        'привет всем!',
+        'это тестовое сообщение, чтобы проверить, как выглядит оверлей в OBS',
+        'лол',
+        'го катку',
+        'а какой у тебя билд?',
+        'Kappa',
+        'стрим топ, подписался',
+        'скинь ссылку на дискорд',
+        'Очень длинное сообщение для проверки переноса строк и того, что плашка не вылезает за границы источника',
+        '+1',
+        'звук чуть тише сделай',
+        'KEKW'
+      ];
+      var shade = 0;
+
+      function push() {
+        shade = (shade + 47) % 360;
+        var text = texts[Math.floor(Math.random() * texts.length)];
+        addMessage({
+          platform: ['twitch', 'youtube', 'kick'][Math.floor(Math.random() * 3)],
+          user: users[Math.floor(Math.random() * users.length)],
+          color: 'hsl(' + shade + ', 75%, 74%)',
+          html: esc(text),
+          id: null
+        });
+      }
+
+      // немного «истории», чтобы сразу увидеть заполненный чат
+      for (var i = 0; i < 7; i++) push();
+
+      (function loop() {
+        setTimeout(function () {
+          push();
+          loop();
+        }, 1100 + Math.random() * 1700);
+      })();
+    }
+
+    // ---------------------------------------------------------------------
+    // 8. Запуск
+    // ---------------------------------------------------------------------
+    if (CONFIG.demo) {
+      startDemo();
+    } else {
+      connectTwitch(CONFIG.twitch);
+      connectKick(CONFIG.kick);
+      connectYouTube({
+        videoId: CONFIG.youtubeId,
+        channelId: CONFIG.youtubeChannel,
+        apiKey: CONFIG.youtubeKey,
+        relay: CONFIG.youtubeRelay,
+        relayUrl: CONFIG.youtubeRelayUrl,
+        pollMs: CONFIG.youtubePollMs
+      });
+
+      var nothing = !CONFIG.twitch.length && !CONFIG.kick.length &&
+        !CONFIG.youtubeId && !CONFIG.youtubeChannel;
+      if (nothing) {
+        setStatus('config', 'ничего не подключено — заполните config.js или ?demo=1');
+        if (CONFIG.debug) {
+          statusEl.classList.add('visible');
+        }
+      }
+    }
+  })();
+  </script>
+</body>
+</html>

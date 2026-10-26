@@ -1,0 +1,1197 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Настройки чата</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0b0c13;
+    --panel: #131522;
+    --panel-2: #171a2a;
+    --line: #262a3d;
+    --text: #eef0fa;
+    --muted: #9aa0b8;
+    --accent: #a970ff;
+    --accent-2: #7c3aed;
+    --ok: #56d364;
+    --err: #ff7b72;
+    --radius: 14px;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    height: 100%;
+    margin: 0;
+    background: radial-gradient(1000px 500px at 15% -10%, rgba(169, 112, 255, 0.10), transparent 60%),
+                radial-gradient(800px 400px at 110% 10%, rgba(62, 166, 255, 0.08), transparent 60%),
+                var(--bg);
+    color: var(--text);
+    font: 14px/1.45 "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+    overflow: hidden;
+  }
+
+  .app {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 22px 26px 14px;
+  }
+
+  .head h1 {
+    margin: 0;
+    font-size: 21px;
+    letter-spacing: -0.01em;
+  }
+
+  .head p {
+    margin: 3px 0 0;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 4px;
+    padding: 0 26px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .tab {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    font: inherit;
+    font-weight: 600;
+    padding: 10px 14px 12px;
+    border-radius: 10px 10px 0 0;
+    cursor: pointer;
+    position: relative;
+  }
+
+  .tab:hover { color: var(--text); background: rgba(255, 255, 255, 0.03); }
+
+  .tab.active { color: var(--text); }
+
+  .tab.active::after {
+    content: "";
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    bottom: -1px;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--accent);
+  }
+
+  .content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 22px 26px 8px;
+  }
+
+  .panel { display: none; }
+  .panel.active { display: block; animation: fade 140ms ease-out; }
+
+  @keyframes fade {
+    from { opacity: 0; transform: translateY(3px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  .card {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent), var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 18px 18px 6px;
+    margin-bottom: 16px;
+  }
+
+  .card-head {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    margin-bottom: 14px;
+  }
+
+  .card-head h2 {
+    margin: 0;
+    font-size: 15px;
+  }
+
+  .card-head p {
+    margin: 1px 0 0;
+    color: var(--muted);
+    font-size: 12px;
+  }
+
+  .dot {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    flex: 0 0 auto;
+    box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.04);
+  }
+
+  .dot.twitch { background: #9146ff; }
+  .dot.kick { background: #53fc18; }
+  .dot.youtube { background: #ff0033; }
+  .dot.bot { background: var(--ok); }
+  .dot.bot.stopped, .dot.bot.error { background: var(--err); }
+  .dot.bot.starting, .dot.bot.stopping { background: #e3b341; }
+  .dot.bot.external { background: #3ea6ff; }
+
+  .bot-value {
+    padding: 8px 0 12px;
+    font-weight: 700;
+    font-size: 14px;
+  }
+
+  .bot-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 2px 0 16px;
+  }
+
+  .field {
+    display: block;
+    margin-bottom: 14px;
+  }
+
+  .field > span,
+  .field > label > span {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 600;
+    font-size: 13px;
+  }
+
+  .field small {
+    display: block;
+    margin-top: 5px;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.35;
+  }
+
+  input[type="text"],
+  input[type="password"],
+  input[type="number"],
+  select {
+    width: 100%;
+    height: 38px;
+    padding: 0 12px;
+    border-radius: 9px;
+    border: 1px solid var(--line);
+    background: #0e1019;
+    color: var(--text);
+    font: inherit;
+    outline: none;
+    transition: border-color 120ms, box-shadow 120ms;
+  }
+
+  input:focus, select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(169, 112, 255, 0.16);
+  }
+
+  input::placeholder { color: #5d6378; }
+
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 14px;
+  }
+
+  .themes {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  @media (max-width: 700px) {
+    .themes { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
+
+  .theme-card {
+    appearance: none;
+    border: 1px solid var(--line);
+    background: #0e1019;
+    color: var(--muted);
+    border-radius: 10px;
+    padding: 7px 7px 8px;
+    cursor: pointer;
+    text-align: left;
+    font: inherit;
+    transition: border-color 120ms, box-shadow 120ms, transform 120ms;
+  }
+
+  .theme-card:hover {
+    border-color: #3a405c;
+    transform: translateY(-1px);
+  }
+
+  .theme-card.active {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(169, 112, 255, 0.18);
+    color: var(--text);
+  }
+
+  .theme-card:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .theme-preview {
+    display: block;
+    height: 44px;
+    border-radius: 6px;
+    padding: 7px 7px;
+    margin-bottom: 7px;
+    overflow: hidden;
+    font-size: 8.5px;
+    line-height: 1.25;
+  }
+
+  .theme-preview b {
+    display: block;
+    font-size: 9px;
+    margin-bottom: 1px;
+  }
+
+  .theme-preview i {
+    display: block;
+    font-style: normal;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    opacity: 0.92;
+  }
+
+  .theme-name {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    text-align: center;
+  }
+
+  .theme-card[data-theme="classic"] .theme-preview {
+    background: rgba(10, 10, 14, 0.82);
+    color: #f4f4f7;
+    border-left: 3px solid #9146ff;
+  }
+
+  .theme-card[data-theme="classic"] .theme-preview b { color: #bf94ff; }
+
+  .theme-card[data-theme="glass"] .theme-preview {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.20), rgba(255, 255, 255, 0.04)),
+                rgba(14, 17, 28, 0.72);
+    color: #f4f4f7;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+
+  .theme-card[data-theme="glass"] .theme-preview b { color: #ffb3c0; }
+
+  .theme-card[data-theme="neon"] .theme-preview {
+    background: rgba(8, 6, 20, 0.85);
+    color: #f7f3ff;
+    border: 1px solid #9146ff;
+    box-shadow: 0 0 10px rgba(145, 70, 255, 0.55);
+  }
+
+  .theme-card[data-theme="neon"] .theme-preview b { color: #d3a2ff; }
+
+  .theme-card[data-theme="soft"] .theme-preview {
+    background: rgba(255, 255, 255, 0.88);
+    color: #1a1f2e;
+    border: 1px solid rgba(20, 25, 45, 0.08);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.22);
+  }
+
+  .theme-card[data-theme="soft"] .theme-preview b { color: #6a3bd0; }
+
+  .theme-card[data-theme="minimal"] .theme-preview {
+    background: rgba(255, 255, 255, 0.04);
+    color: #ffffff;
+    border-left: 2px solid #53fc18;
+    padding-left: 8px;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  }
+
+  .theme-card[data-theme="minimal"] .theme-preview b { color: #d2ffbf; }
+
+  .theme-card[data-theme="streamlabs"] .theme-preview {
+    background: rgba(0, 0, 0, 0.38);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+  }
+
+  .theme-card[data-theme="streamlabs"] .theme-preview b {
+    flex: 0 0 38%;
+    text-align: right;
+    color: #ffffff;
+    margin-bottom: 0;
+    text-shadow: 0 0 6px rgba(145, 70, 255, 0.9), 0 1px 2px #000;
+  }
+
+  .theme-card[data-theme="streamlabs"] .theme-preview i {
+    flex: 1 1 auto;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+  }
+
+  .secret {
+    display: flex;
+    gap: 8px;
+  }
+
+  .secret input { flex: 1; }
+
+  .range-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  input[type="range"] {
+    flex: 1;
+    appearance: none;
+    height: 4px;
+    border-radius: 4px;
+    background: linear-gradient(90deg, var(--accent) 0%, var(--accent) 50%, #2a2e43 50%);
+    outline: none;
+    cursor: pointer;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #fff;
+    border: 3px solid var(--accent);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+  }
+
+  .value {
+    min-width: 52px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    color: var(--accent);
+  }
+
+  .switch {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 9px 0 12px;
+    cursor: pointer;
+  }
+
+  .switch input {
+    appearance: none;
+    width: 38px;
+    height: 22px;
+    border-radius: 22px;
+    background: #2a2e43;
+    border: 1px solid var(--line);
+    position: relative;
+    flex: 0 0 auto;
+    cursor: pointer;
+    transition: background 140ms;
+    margin: 1px 0 0;
+  }
+
+  .switch input::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #fff;
+    transition: transform 140ms;
+  }
+
+  .switch input:checked { background: var(--accent-2); border-color: var(--accent-2); }
+  .switch input:checked::after { transform: translateX(16px); }
+
+  .switch span {
+    font-weight: 600;
+    font-size: 13px;
+  }
+
+  .switch small {
+    display: block;
+    margin-top: 2px;
+    color: var(--muted);
+    font-weight: 400;
+    font-size: 12px;
+    line-height: 1.35;
+  }
+
+  .note {
+    border: 1px solid rgba(169, 112, 255, 0.28);
+    background: rgba(169, 112, 255, 0.08);
+    border-radius: 12px;
+    padding: 11px 14px;
+    color: #d9cbff;
+    font-size: 12.5px;
+    line-height: 1.45;
+  }
+
+  .foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 26px 18px;
+    border-top: 1px solid var(--line);
+    background: rgba(11, 12, 19, 0.85);
+  }
+
+  .status {
+    min-height: 20px;
+    color: var(--muted);
+    font-size: 12.5px;
+    line-height: 1.4;
+  }
+
+  .status.ok { color: var(--ok); }
+  .status.err { color: var(--err); }
+
+  .actions {
+    display: flex;
+    gap: 8px;
+    flex: 0 0 auto;
+  }
+
+  button {
+    font: inherit;
+    font-weight: 600;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    padding: 9px 16px;
+    cursor: pointer;
+    transition: background 120ms, border-color 120ms, opacity 120ms;
+  }
+
+  button:disabled { opacity: 0.55; cursor: default; }
+
+  .primary {
+    background: linear-gradient(180deg, #b483ff, #8b4dff);
+    color: #fff;
+    box-shadow: 0 6px 18px rgba(124, 58, 237, 0.28);
+  }
+
+  .primary:hover:not(:disabled) { background: linear-gradient(180deg, #c19bff, #9a63ff); }
+
+  .ghost {
+    background: transparent;
+    border-color: var(--line);
+    color: var(--text);
+  }
+
+  .ghost:hover { border-color: #3a3f5a; background: rgba(255, 255, 255, 0.04); }
+
+  .ghost.danger { color: #ffb3ae; }
+  .ghost.danger:hover { border-color: rgba(255, 123, 114, 0.4); background: rgba(255, 123, 114, 0.07); }
+
+  .small { padding: 7px 12px; font-size: 12.5px; }
+
+  .path {
+    color: #6f758c;
+    font-size: 11.5px;
+    word-break: break-all;
+    margin-top: 8px;
+  }
+
+  .content::-webkit-scrollbar { width: 10px; }
+  .content::-webkit-scrollbar-thumb { background: #262a3d; border-radius: 10px; border: 3px solid var(--bg); }
+
+  @media (max-width: 700px) {
+    .grid-2 { grid-template-columns: 1fr; }
+    .head, .tabs, .content, .foot { padding-left: 18px; padding-right: 18px; }
+  }
+  @media (max-height: 640px) {
+    .head { padding-top: 16px; }
+    .content { padding-top: 16px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="head">
+    <div>
+      <h1>Настройки чата</h1>
+      <p>Оверлей для OBS, окно поверх игры и встроенный чат-бот — один набор настроек</p>
+    </div>
+    <button class="ghost small" id="open-folder" type="button">Папка с настройками</button>
+  </header>
+
+  <nav class="tabs" aria-label="Разделы настроек">
+    <button class="tab active" type="button" data-tab="accounts">Аккаунты и каналы</button>
+    <button class="tab" type="button" data-tab="look">Внешний вид</button>
+    <button class="tab" type="button" data-tab="behavior">Поведение</button>
+    <button class="tab" type="button" data-tab="bot">Бот</button>
+  </nav>
+
+  <main class="content" id="form">
+    <section class="panel active" id="tab-accounts">
+      <div class="card">
+        <div class="card-head">
+          <span class="dot twitch"></span>
+          <div>
+            <h2>Twitch</h2>
+            <p>Читается анонимно — логин и токены не нужны</p>
+          </div>
+        </div>
+        <label class="field">
+          <span>Каналы</span>
+          <input type="text" id="twitch" placeholder="your_channel, второй_канал" autocomplete="off" spellcheck="false">
+          <small>Можно несколько — через запятую. Без @ и #. Если канал переименован, поменяй его здесь.</small>
+        </label>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <span class="dot kick"></span>
+          <div>
+            <h2>Kick</h2>
+            <p>Неофициальное API — может не работать без VPN</p>
+          </div>
+        </div>
+        <label class="field">
+          <span>Каналы</span>
+          <input type="text" id="kick" placeholder="channel_one, channel_two" autocomplete="off" spellcheck="false">
+          <small>Через запятую. Оставь пустым, если Kick не нужен.</small>
+        </label>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <span class="dot youtube"></span>
+          <div>
+            <h2>YouTube</h2>
+            <p>Эфир находится автоматически; чат читается без дневной квоты</p>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <label class="field">
+            <span>Канал</span>
+            <input type="text" id="yt-channel" placeholder="UC… или @ник" autocomplete="off" spellcheck="false">
+            <small>ID канала (UC…) или @ник.</small>
+          </label>
+          <label class="field">
+            <span>Конкретная трансляция</span>
+            <input type="text" id="yt-video" placeholder="необязательно" autocomplete="off" spellcheck="false">
+            <small>ID видео, если нужен не текущий эфир.</small>
+          </label>
+        </div>
+
+        <label class="field">
+          <span>Ключ YouTube Data API v3</span>
+          <div class="secret">
+            <input type="password" id="yt-key" placeholder="AIza…" autocomplete="off" spellcheck="false">
+            <button class="ghost small" id="toggle-key" type="button">Показать</button>
+          </div>
+          <small>Нужен боту для ответов в чат и как запасной источник чтения. Для самого чата не обязателен.</small>
+        </label>
+
+        <div class="grid-2">
+          <label class="field">
+            <span>Источник чата</span>
+            <select id="yt-source">
+              <option value="auto">Авто — без квоты (рекомендуется)</option>
+              <option value="api">Только Data API (с квотой)</option>
+            </select>
+            <small>«Авто» читает сам чат YouTube: без дневного лимита, сообщения приходят через 1–2 секунды.</small>
+          </label>
+          <label class="field">
+            <span>Интервал опроса API, сек</span>
+            <input type="number" id="yt-poll" min="5" max="600" step="1" inputmode="numeric">
+            <small>Только для запасного варианта через Data API.</small>
+          </label>
+        </div>
+
+        <label class="switch">
+          <input type="checkbox" id="yt-relay">
+          <span>
+            Раздавать сообщения из этого приложения в OBS
+            <small>Один читатель на два окна — в OBS сообщения приходят мгновенно.</small>
+          </span>
+        </label>
+      </div>
+
+      <div class="note">
+        Если включена синхронизация (вкладка «Поведение»), эти же каналы, ключ
+        и ссылка YouTube сохраняются в bot/config.js — в том числе для уведомлений
+        о начале и конце стрима. Встроенный бот перезапустится сам и сразу
+        подхватит новый канал.
+      </div>
+    </section>
+
+    <section class="panel" id="tab-look">
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <h2>Внешний вид</h2>
+            <p>Применяется и в OBS, и поверх игры</p>
+          </div>
+        </div>
+
+        <div class="field">
+          <span>Тема оформления</span>
+          <div class="themes" id="themes">
+            <button class="theme-card" type="button" data-theme="classic" aria-pressed="false">
+              <span class="theme-preview"><b>Stream Helper</b><i>Привет, чат!</i></span>
+              <span class="theme-name">Классика</span>
+            </button>
+            <button class="theme-card" type="button" data-theme="glass" aria-pressed="false">
+              <span class="theme-preview"><b>Stream Helper</b><i>Привет, чат!</i></span>
+              <span class="theme-name">Стекло</span>
+            </button>
+            <button class="theme-card" type="button" data-theme="neon" aria-pressed="false">
+              <span class="theme-preview"><b>Stream Helper</b><i>Привет, чат!</i></span>
+              <span class="theme-name">Неон</span>
+            </button>
+            <button class="theme-card" type="button" data-theme="soft" aria-pressed="false">
+              <span class="theme-preview"><b>Stream Helper</b><i>Привет, чат!</i></span>
+              <span class="theme-name">Светлая</span>
+            </button>
+            <button class="theme-card" type="button" data-theme="minimal" aria-pressed="false">
+              <span class="theme-preview"><b>Stream Helper</b><i>Привет, чат!</i></span>
+              <span class="theme-name">Минимализм</span>
+            </button>
+            <button class="theme-card" type="button" data-theme="streamlabs" aria-pressed="false">
+              <span class="theme-preview"><b>Stream Helper</b><i>Привет, чат!</i></span>
+              <span class="theme-name">Streamlabs</span>
+            </button>
+          </div>
+          <small>В «Минимализме» и «Streamlabs» плашек нет, поэтому прозрачность на них не влияет.</small>
+        </div>
+
+        <label class="field">
+          <span>Сообщений на экране</span>
+          <div class="range-row">
+            <input type="range" id="max-messages" min="1" max="100" step="1">
+            <span class="value" id="max-messages-value">14</span>
+          </div>
+        </label>
+
+        <label class="field">
+          <span>Размер шрифта</span>
+          <div class="range-row">
+            <input type="range" id="font-size" min="10" max="72" step="1">
+            <span class="value" id="font-size-value">24 px</span>
+          </div>
+        </label>
+
+        <label class="field">
+          <span>Прозрачность плашки</span>
+          <div class="range-row">
+            <input type="range" id="bg-opacity" min="0" max="100" step="1">
+            <span class="value" id="bg-opacity-value">58%</span>
+          </div>
+        </label>
+
+        <label class="switch">
+          <input type="checkbox" id="show-platform">
+          <span>
+            Плашки платформ
+            <small>Показывать TWITCH / YOUTUBE / KICK перед сообщением.</small>
+          </span>
+        </label>
+
+        <label class="field">
+          <span>Новые сообщения</span>
+          <select id="align">
+            <option value="bottom">Снизу</option>
+            <option value="top">Сверху</option>
+          </select>
+        </label>
+      </div>
+    </section>
+
+    <section class="panel" id="tab-behavior">
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <h2>Поведение</h2>
+            <p>Служебные режимы оверлея</p>
+          </div>
+        </div>
+
+        <label class="switch">
+          <input type="checkbox" id="demo">
+          <span>
+            Демо-режим
+            <small>Фейковый чат для проверки внешнего вида. Реальные сообщения не показываются.</small>
+          </span>
+        </label>
+
+        <label class="switch">
+          <input type="checkbox" id="debug">
+          <span>
+            Технический статус
+            <small>Показывает состояние подключений в углу оверлея.</small>
+          </span>
+        </label>
+
+        <label class="switch">
+          <input type="checkbox" id="sync-bot">
+          <span>
+            Синхронизировать с чат-ботом
+            <small>Менять канал Twitch, YouTube, ключ API и ссылки в уведомлениях бота. Встроенный бот перезапустится автоматически.</small>
+          </span>
+        </label>
+
+        <div class="note">
+          Изменения применяются к окну поверх игры сразу после сохранения.
+          В OBS обнови источник «Мультичат»: правый клик по источнику → «Обновить».
+        </div>
+        <p class="path" id="settings-path"></p>
+        <p class="path" id="bot-path"></p>
+      </div>
+    </section>
+
+    <section class="panel" id="tab-bot">
+      <div class="card">
+        <div class="card-head">
+          <span class="dot bot stopped" id="bot-dot"></span>
+          <div>
+            <h2>Встроенный чат-бот</h2>
+            <p id="bot-state-text">Проверяю…</p>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="field">
+            <span>Канал Twitch</span>
+            <div class="bot-value" id="bot-channel">—</div>
+          </div>
+          <div class="field">
+            <span>Порт панели</span>
+            <div class="bot-value" id="bot-port">39001</div>
+          </div>
+        </div>
+
+        <div class="bot-actions">
+          <button class="primary" id="bot-open" type="button">Открыть панель бота</button>
+          <button class="ghost" id="bot-toggle" type="button">Остановить</button>
+          <button class="ghost" id="bot-restart" type="button">Перезапустить</button>
+          <button class="ghost" id="bot-folder" type="button">Папка бота</button>
+        </div>
+
+        <p class="path" id="bot-error"></p>
+        <p class="path" id="bot-config-path"></p>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <h2>Запуск</h2>
+            <p>Как бот ведёт себя при старте приложения</p>
+          </div>
+        </div>
+
+        <label class="switch">
+          <input type="checkbox" id="bot-autostart">
+          <span>
+            Запускать бота вместе с приложением
+            <small>Если выключить, бот можно запустить вручную из трея или с этой вкладки.</small>
+          </span>
+        </label>
+
+        <div class="note">
+          Команды, автосообщения, модерация, баллы, розыгрыши и викторина
+          настраиваются в панели бота. Здесь — только запуск и общие каналы.
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <div class="status" id="status"></div>
+    <div class="actions">
+      <button class="ghost danger" id="reset" type="button">Вернуть config.js</button>
+      <button class="ghost" id="cancel" type="button">Закрыть</button>
+      <button class="primary" id="save" type="button">Сохранить</button>
+    </div>
+  </footer>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var api = window.settingsApi;
+  var dirty = false;
+  var currentTheme = 'classic';
+  var THEMES = ['classic', 'glass', 'neon', 'soft', 'minimal', 'streamlabs'];
+
+  function $(id) { return document.getElementById(id); }
+
+  function setTheme(theme, silent) {
+    if (THEMES.indexOf(theme) === -1) theme = 'classic';
+    currentTheme = theme;
+    Array.prototype.forEach.call(document.querySelectorAll('.theme-card'), function (card) {
+      var active = card.getAttribute('data-theme') === theme;
+      card.classList.toggle('active', active);
+      card.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
+    if (!silent) markDirty();
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll('.theme-card'), function (card) {
+    card.addEventListener('click', function () {
+      setTheme(card.getAttribute('data-theme'));
+    });
+  });
+
+  function setStatus(text, kind) {
+    var node = $('status');
+    node.textContent = text || '';
+    node.className = 'status' + (kind ? ' ' + kind : '');
+  }
+
+  function showBot(bot) {
+    var node = $('bot-path');
+    if (!bot || !bot.file) {
+      node.textContent = '';
+      return;
+    }
+    node.textContent = (bot.exists ? 'Чат-бот: ' : 'Чат-бот не найден: ') + bot.file;
+    node.style.color = bot.exists ? '' : '#ffb3ae';
+  }
+
+  // --- Встроенный бот: статус и кнопки запуска ---------------------------
+  var lastBot = null;
+  var botBusy = false;
+  var botPoll = null;
+  var BOT_LABELS = {
+    stopped: 'Остановлен',
+    starting: 'Запускается…',
+    running: 'Работает',
+    external: 'Работает отдельно',
+    stopping: 'Останавливается…',
+    error: 'Ошибка'
+  };
+
+  function renderBot(status) {
+    if (!status) return;
+    lastBot = status;
+    var label = BOT_LABELS[status.state] || status.label || status.state;
+    $('bot-state-text').textContent = label + (status.pid ? ' · pid ' + status.pid : '');
+    $('bot-dot').className = 'dot bot ' + status.state;
+    $('bot-channel').textContent = status.channel ? '#' + status.channel : '—';
+    $('bot-port').textContent = status.port || '39001';
+    $('bot-error').textContent = status.lastError || '';
+    $('bot-error').style.color = status.lastError ? '#ffb3ae' : '';
+    $('bot-config-path').textContent =
+      (status.configExists ? 'Файл бота: ' : 'Файл бота не найден: ') + status.configFile;
+
+    $('bot-open').disabled = botBusy || !(status.state === 'running' || status.state === 'external');
+    $('bot-toggle').textContent = status.canStop ? 'Остановить' : 'Запустить';
+    $('bot-toggle').disabled = botBusy || !(status.canStop || status.canStart);
+    $('bot-restart').disabled = botBusy || !status.canRestart;
+    $('bot-folder').disabled = botBusy;
+  }
+
+  function refreshBot() {
+    if (!api || !api.botStatus) return;
+    api.botStatus().then(renderBot).catch(function () { /* статус обновится позже */ });
+  }
+
+  function startBotPolling() {
+    stopBotPolling();
+    refreshBot();
+    botPoll = setInterval(refreshBot, 2500);
+  }
+
+  function stopBotPolling() {
+    if (botPoll) {
+      clearInterval(botPoll);
+      botPoll = null;
+    }
+  }
+
+  function botCommand(action) {
+    if (!api || botBusy) return;
+    botBusy = true;
+    if (lastBot) renderBot(lastBot);
+    var messages = {
+      start: 'Запускаю бота…',
+      stop: 'Останавливаю бота…',
+      restart: 'Перезапускаю бота…'
+    };
+    setStatus(messages[action] || '…');
+    var promise;
+    if (action === 'stop') promise = api.botStop();
+    else if (action === 'start') promise = api.botStart();
+    else promise = api.botRestart();
+
+    Promise.resolve(promise).then(function (status) {
+      botBusy = false;
+      renderBot(status);
+      setStatus('Бот: ' + (BOT_LABELS[status.state] || status.state) + '.',
+        status.state === 'error' ? 'err' : 'ok');
+    }).catch(function (error) {
+      botBusy = false;
+      if (lastBot) renderBot(lastBot);
+      setStatus('Не удалось: ' + (error && error.message ? error.message : error), 'err');
+    });
+  }
+
+  function syncMessage(sync) {
+    if (!sync) return '';
+    if (sync.skipped) return 'Синхронизация с чат-ботом выключена.';
+    if (sync.ok && sync.changed) return 'Чат-бот обновлён.';
+    if (sync.ok) return 'В чат-боте уже такие же каналы и ссылки.';
+    if (sync.reason === 'not-found') return 'Чат-бот не найден — синхронизация пропущена.';
+    return 'Синхронизация с чат-ботом не удалась: ' + (sync.message || sync.reason || 'ошибка');
+  }
+
+  function splitChannels(value) {
+    return String(value || '').split(/[,\s]+/)
+      .map(function (item) { return item.trim().replace(/^[#@]+/, ''); })
+      .filter(Boolean);
+  }
+
+  function paintRange(input, output, suffix) {
+    var min = Number(input.min || 0);
+    var max = Number(input.max || 100);
+    var value = Number(input.value);
+    var percent = max > min ? ((value - min) / (max - min)) * 100 : 0;
+    input.style.background = 'linear-gradient(90deg, var(--accent) 0%, var(--accent) ' +
+      percent + '%, #2a2e43 ' + percent + '%)';
+    output.textContent = value + (suffix || '');
+  }
+
+  function bindRange(id, suffix) {
+    var input = $(id);
+    var output = $(id + '-value');
+    function update() { paintRange(input, output, suffix); markDirty(); }
+    input.addEventListener('input', update);
+    return update;
+  }
+
+  var updateMax = bindRange('max-messages', '');
+  var updateFont = bindRange('font-size', ' px');
+  var updateOpacity = bindRange('bg-opacity', '%');
+
+  function markDirty() {
+    dirty = true;
+    setStatus('Есть несохранённые изменения');
+  }
+
+  function fill(settings) {
+    $('twitch').value = (settings.twitch || []).join(', ');
+    $('kick').value = (settings.kick || []).join(', ');
+
+    var yt = settings.youtube || {};
+    $('yt-channel').value = yt.channelId || '';
+    $('yt-video').value = yt.videoId || '';
+    $('yt-key').value = yt.apiKey || '';
+    $('yt-key').type = 'password';
+    $('toggle-key').textContent = 'Показать';
+    $('yt-relay').checked = yt.relay !== false;
+    $('yt-source').value = yt.source === 'api' ? 'api' : 'auto';
+    $('yt-poll').value = Math.round((yt.pollMs || 12000) / 1000);
+
+    setTheme(settings.theme || 'classic', true);
+
+    $('max-messages').value = settings.maxMessages || 14;
+    $('font-size').value = settings.fontSize || 24;
+    $('bg-opacity').value = settings.bgOpacity == null ? 58 : settings.bgOpacity;
+    $('show-platform').checked = settings.showPlatform !== false;
+    $('align').value = settings.align === 'top' ? 'top' : 'bottom';
+    $('demo').checked = settings.demo === true;
+    $('debug').checked = settings.debug === true;
+    $('sync-bot').checked = settings.syncBot !== false;
+    $('bot-autostart').checked = settings.botAutoStart !== false;
+
+    updateMax();
+    updateFont();
+    updateOpacity();
+    dirty = false;
+  }
+
+  function collect() {
+    var pollSeconds = Number($('yt-poll').value);
+    if (!isFinite(pollSeconds) || pollSeconds < 5) pollSeconds = 12;
+    if (pollSeconds > 600) pollSeconds = 600;
+
+    return {
+      twitch: splitChannels($('twitch').value),
+      kick: splitChannels($('kick').value),
+      youtube: {
+        channelId: $('yt-channel').value.trim(),
+        videoId: $('yt-video').value.trim(),
+        apiKey: $('yt-key').value.trim(),
+        relay: $('yt-relay').checked,
+        source: $('yt-source').value === 'api' ? 'api' : 'auto',
+        pollMs: Math.round(pollSeconds * 1000)
+      },
+      maxMessages: Number($('max-messages').value),
+      fontSize: Number($('font-size').value),
+      bgOpacity: Number($('bg-opacity').value),
+      theme: currentTheme,
+      showPlatform: $('show-platform').checked,
+      align: $('align').value === 'top' ? 'top' : 'bottom',
+      demo: $('demo').checked,
+      debug: $('debug').checked,
+      syncBot: $('sync-bot').checked,
+      botAutoStart: $('bot-autostart').checked
+    };
+  }
+
+  function setBusy(busy) {
+    ['save', 'reset', 'cancel'].forEach(function (id) { $(id).disabled = busy; });
+  }
+
+  async function save() {
+    if (!api) return;
+    setBusy(true);
+    setStatus('Сохраняю…');
+    try {
+      var result = await api.save(collect());
+      fill(result.settings);
+      var syncText = syncMessage(result.sync);
+      var botText = '';
+      if (result.botRestarting) botText = ' Бот перезапускается с новым каналом.';
+      else if (result.botExternal) botText = ' Бот запущен отдельно — перезапусти его сам.';
+      else if (result.botAutoStartChanged) botText = ' Автозапуск бота обновлён.';
+      var kind = result.sync && result.sync.ok === false ? 'err' : 'ok';
+      setStatus('Сохранено. Окно поверх игры обновилось; в OBS обнови источник «Мультичат».' +
+        (syncText ? ' ' + syncText : '') + botText, kind);
+      refreshBot();
+    } catch (error) {
+      setStatus('Не удалось сохранить: ' + (error && error.message ? error.message : error), 'err');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function reset() {
+    if (!api) return;
+    if (!confirm('Удалить пользовательские настройки и вернуться к значениям из config.js?')) return;
+    setBusy(true);
+    setStatus('Возвращаю настройки из config.js…');
+    try {
+      var data = await api.reset();
+      fill(data.settings);
+      showBot(data.bot);
+      var resetSyncText = syncMessage(data.sync);
+      var resetKind = data.sync && data.sync.ok === false ? 'err' : 'ok';
+      setStatus('Готово: используются настройки из config.js.' +
+        (resetSyncText ? ' ' + resetSyncText : ''), resetKind);
+    } catch (error) {
+      setStatus('Не удалось сбросить: ' + (error && error.message ? error.message : error), 'err');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function close() {
+    if (dirty && !confirm('Закрыть без сохранения?')) return;
+    if (api) api.close();
+    else window.close();
+  }
+
+  function switchTab(name) {
+    document.querySelectorAll('.tab').forEach(function (tab) {
+      tab.classList.toggle('active', tab.dataset.tab === name);
+    });
+    document.querySelectorAll('.panel').forEach(function (panel) {
+      panel.classList.toggle('active', panel.id === 'tab-' + name);
+    });
+    if (name === 'bot') startBotPolling();
+    else stopBotPolling();
+  }
+
+  document.querySelectorAll('.tab').forEach(function (tab) {
+    tab.addEventListener('click', function () { switchTab(tab.dataset.tab); });
+  });
+
+  $('save').addEventListener('click', save);
+  $('reset').addEventListener('click', reset);
+  $('cancel').addEventListener('click', close);
+  $('open-folder').addEventListener('click', function () {
+    if (api) api.openFolder();
+  });
+
+  $('bot-open').addEventListener('click', function () {
+    if (api) api.botOpen();
+  });
+  $('bot-toggle').addEventListener('click', function () {
+    if (!lastBot) return;
+    botCommand(lastBot.canStop ? 'stop' : 'start');
+  });
+  $('bot-restart').addEventListener('click', function () {
+    botCommand('restart');
+  });
+  $('bot-folder').addEventListener('click', function () {
+    if (api) api.botOpenFolder();
+  });
+
+  $('toggle-key').addEventListener('click', function () {
+    var input = $('yt-key');
+    var hidden = input.type === 'password';
+    input.type = hidden ? 'text' : 'password';
+    this.textContent = hidden ? 'Скрыть' : 'Показать';
+  });
+
+  $('form').addEventListener('input', function (event) {
+    if (event.target && event.target.type === 'range') return;
+    markDirty();
+  });
+  $('form').addEventListener('change', markDirty);
+
+  document.addEventListener('keydown', function (event) {
+    if (event.key === 'Escape') { event.preventDefault(); close(); }
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+      event.preventDefault();
+      save();
+    }
+  });
+
+  async function init() {
+    if (!api) {
+      setStatus('Нет связи с приложением. Открой настройки из трея «Stream Helper — чат и бот».', 'err');
+      setBusy(true);
+      return;
+    }
+    try {
+      var data = await api.load();
+      fill(data.settings);
+      showBot(data.bot);
+      if (data.botProcess) renderBot(data.botProcess);
+      $('settings-path').textContent = 'Файл настроек: ' + data.settingsFile;
+      setStatus('');
+    } catch (error) {
+      setStatus('Не удалось загрузить настройки: ' + (error && error.message ? error.message : error), 'err');
+    }
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
