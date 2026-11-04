@@ -1,129 +1,136 @@
-# Чат-бот (встроен в приложение)
+# Chat bot (built into the app)
 
-Этот бот — часть приложения **«Stream Helper — чат и бот»** (папка `chat-desktop`).
-Приложение запускает его скрыто, открывает панель в отдельном окне и
-останавливает при выходе. Отдельная консоль и `node.exe` для работы не нужны.
+This bot is part of the **Stream Helper — chat & bot** application (the
+`chat-desktop` folder). The app starts it hidden, opens its panel in a separate
+window, and stops it on exit. No separate console or `node.exe` is needed.
 
-Бот читает чат вашего канала на Twitch, отвечает на команды, раз в N
-минут пишет автосообщения и отправляет уведомления о начале стрима в
-Telegram. YouTube сейчас **не используется** и выключен в настройках — бот
-работает только с Twitch.
+The bot reads chat on your Twitch channel, replies to commands, posts timed
+messages every N minutes, and sends stream-start notifications to Telegram.
+YouTube is currently **not used** and is disabled in the settings — the bot
+works with Twitch only.
 
-Канал задаётся в настройках приложения («Аккаунты и каналы») или вручную
-в `config.js`. По умолчанию он пустой — заполните его перед первым запуском.
-
----
-
-## Что умеет
-
-- **Команды** — `!help`, `!social`, `!uptime`, `!ping`, `!twitch`, `!youtube`
-  (просто ссылка), `!specs`, `!ds`, `!game` и любые свои
-  (`!discord`, `!lurk`, `!обнять` …).
-- **Автосообщения** — по таймеру, но только пока в чате есть жизнь.
-- **Модерация** — удаляет спам, запрещённые слова, сторонние ссылки и капс,
-  сама выдаёт мут и бан по накопленным нарушениям. Есть ручные команды
-  `!ban`, `!timeout`, `!unban`, `!delete`, `!modstats`.
-- **Баллы** — валюта канала за сообщения и ежедневный вход; переводы между
-  зрителями и топ чата.
-- **Розыгрыши** — вход по ключевому слову или `!join`, случайные победители,
-  необязательная стоимость участия в баллах.
-- **Викторина** — вопросы в чат с таймером, подсказками и наградой за первый
-  правильный ответ.
-- **Благодарности за события** — подписки, продления, подарочные подписки,
-  рейды, битсы и фоллоу.
-- **Уведомления в Telegram** — при начале стрима отправляет в канал
-  сообщение с названием, категорией, зрителями и кнопкой «Смотреть»,
-  а когда стрим закончился — справку: длительность, пик и среднее число
-  зрителей, сообщения в чате и от бота, действия модерации.
-- **Панель управления** — `http://127.0.0.1:39001`: статус подключения,
-  живая лента, редактор команд, автосообщений, ссылок, модерации и
-  развлечений. Изменения сохраняются в `config.js` и сразу применяются без
-  перезапуска.
-- **Защита от флуда** — задержки на команду, на зрителя и лимит ответов
-  в минуту.
+The channel is set in the app settings ("Accounts & Channels") or manually in
+`config.js`. It is empty by default — fill it in before the first launch.
 
 ---
 
-## Быстрый старт
+## What it can do
 
-Приложение работает на Electron. Для запуска из исходников и тестов нужен
-**Node.js 20 или новее**; зависимости ставятся командой `npm install` в корне
-проекта. В установленной версии Node.js не нужен: `auth-twitch.bat`,
-`check-config.bat` и `test-alert.bat` используют встроенный Electron.
+- **Commands** — `!help`, `!social`, `!uptime`, `!ping`, `!twitch`, `!youtube`
+  (just a link), `!specs`, `!ds`, `!game`, and any custom ones
+  (`!discord`, `!lurk`, `!hug` …).
+- **Timed messages** — on a timer, but only while chat is active.
+- **Moderation** — removes spam, banned words, third-party links, and caps,
+  and issues timeouts and bans automatically based on accumulated strikes.
+  Manual commands: `!ban`, `!timeout`, `!unban`, `!delete`, `!modstats`.
+- **Points** — channel currency for messages and a daily check-in; transfers
+  between viewers and a chat leaderboard.
+- **Giveaways** — entry by keyword or `!join`, random winners, optional points
+  entry cost.
+- **Quiz** — questions in chat with a timer, hints, and a reward for the first
+  correct answer.
+- **Event thanks** — subscriptions, renewals, gift subscriptions, raids, bits,
+  and follows.
+- **Telegram notifications** — on stream start, sends a message to the channel
+  with the title, category, viewers, and a "Watch" button; when the stream ends,
+  sends a summary: duration, peak and average viewers, chat messages, bot
+  messages, and moderation actions.
+- **Control panel** — `http://127.0.0.1:39001`: connection status, live feed,
+  and editors for commands, timers, links, moderation, and games. Changes are
+  saved to `config.js` and applied immediately without a restart.
+- **Flood protection** — per-command, per-viewer, and replies-per-minute
+  limits.
 
-> **`config.js` не запускается.** Это файл настроек, а не программа: его
-> открывают в Блокноте и правят. Для этого есть `edit-config.bat`; проверить
-> настройки можно через `check-config.bat`. Бота запускает приложение
-> (`..\start.bat`), а не `config.js`.
+---
 
-### Шаг 1. Приложение Twitch (один раз)
+## Quick start
 
-1. Открой <https://dev.twitch.tv/console/apps> → **Register Your Application**.
-2. Заполни:
-   - **Name** — любое, например `StreamHelperBot`;
+The app runs on Electron. Running from source and tests require **Node.js 20 or
+newer**; dependencies are installed with `npm install` in the project root. In
+the installed version Node.js is not needed: `auth-twitch.bat`,
+`check-config.bat`, and `test-alert.bat` use the bundled Electron.
+
+> **`config.js` is not executable.** It is a settings file, not a program: open
+> it in Notepad and edit it. Use `edit-config.bat` for that; validate settings
+> with `check-config.bat`. The bot is started by the app (`..\start.bat`), not
+> by `config.js`.
+
+### Step 1. Twitch application (once)
+
+1. Open <https://dev.twitch.tv/console/apps> → **Register Your Application**.
+2. Fill in:
+   - **Name** — anything, for example `StreamHelperBot`;
    - **OAuth Redirect URLs** — `http://localhost:3000`;
    - **Category** — `Chat Bot`;
    - **Client Type** — `Public`.
-3. Нажми **Manage** и скопируй **Client ID**.
-4. Вставь его в `bot/config.js` (или в `chat-desktop/bot/config.js`):
+3. Click **Manage** and copy the **Client ID**.
+4. In the app, open **Settings → Twitch** and paste the **Client ID**.
+   The `clientSecret` and `botUsername` fields can stay empty.
+
+   The same values can be written manually in `bot/config.js`:
 
    ```js
    twitch: {
      channel: 'your_channel',
-     clientId: 'сюда_client_id',
-     clientSecret: '',   // для Public-приложения не нужно
+     clientId: 'your_client_id_here',
+     clientSecret: '',   // not needed for a Public app
      botUsername: ''
    }
    ```
 
-   Удобнее через `edit-config.bat`.
+   `edit-config.bat` is a convenient way to edit it.
 
-### Шаг 2. Вход в Twitch (один раз)
+### Step 2. Twitch login (once)
 
-Запусти **`auth-twitch.bat`** (он лежит в этой папке, `bot/`).
+In the app, open **Settings → Twitch** and click **Log in to Twitch**. A code
+appears and the Twitch page opens.
 
-Появится код и откроется страница Twitch. Войди **тем аккаунтом, от имени
-которого должен писать бот**, введи код и подтверди доступ.
+Log in with **the account the bot should post as**, enter the code, and confirm
+access.
 
-> Лучше завести отдельный аккаунт-бот (например, `your_channel_bot`), но можно
-> использовать и основной. Отдельный аккаунт потом стоит сделать модератором
-> канала — так он обходит режимы «только подписчики» и «только фолловеры».
+The old method also works: run **`auth-twitch.bat`** in this folder (`bot/`).
 
-Токен сохранится в `data/tokens.json` и будет обновляться сам.
+> It is better to create a separate bot account (for example,
+> `your_channel_bot`), but the main account works too. It is worth making the
+> separate account a channel moderator later — that way it bypasses
+> "subscribers-only" and "followers-only" modes.
 
-> Бот просит права на чтение чата, отправку сообщений, уведомления о
-> подписках/битсах и список фолловеров. Если вход выполнялся в старой версии,
-> **запусти `auth-twitch.bat` ещё раз**: без новых прав не будут работать
-> благодарности за фоллоу. Остальные функции работают и со старым токеном.
+The token is saved to `data/tokens.json` and refreshed automatically.
 
-### Шаг 3. Запуск
+> The bot requests permission to read chat, send messages, receive
+> subscription/bit notifications, and read the follower list. If you logged in
+> with an older version, **log in again** via **Settings → Twitch** (or
+> `auth-twitch.bat`): without the new scopes, follow thanks will not work.
+> Everything else works with the old token too.
 
-Запусти приложение **«Stream Helper — чат и бот»**:
+### Step 3. Launch
 
-- ярлык **«Чат поверх игры»** на рабочем столе, или
-- `..\start.bat` из папки `chat-desktop`, или
-- этот `start.bat` — он откроет приложение и панель бота.
+Launch the **Stream Helper — chat & bot** app:
 
-Бот стартует автоматически и работает скрыто. Панель бота:
+- the **"Chat over game"** desktop shortcut, or
+- `..\start.bat` from the `chat-desktop` folder, or
+- this `start.bat` — it opens the app and the bot panel.
 
-- трей → **«Панель бота…»**;
+The bot starts automatically and runs hidden. Bot panel:
+
+- tray → **"Bot panel…"**;
 - `Ctrl + Alt + B`;
-- ярлык **«Панель бота Stream Helper»**;
-- <http://127.0.0.1:39001> в браузере.
+- the **"Stream Helper bot panel"** shortcut;
+- <http://127.0.0.1:39001> in a browser.
 
-Проверить без стрима (фейковый чат):
+Test without streaming (fake chat):
 
 ```
 ..\start.bat --bot-demo
 ```
 
-Или запустить бота отдельно для отладки:
+Or run the bot separately for debugging:
 
 ```
 node src\index.js --demo
 ```
 
-Проверить настройки и токены, ничего не отправляя:
+Validate settings and tokens without sending anything:
 
 ```
 check-config.bat
@@ -131,235 +138,234 @@ check-config.bat
 
 ---
 
-## Режимы запуска
+## Launch modes
 
-Ботом управляет приложение. Флаги приложения:
+The app manages the bot. App flags:
 
-| Команда | Что делает |
+| Command | What it does |
 |---|---|
-| `..\start.bat` | обычный запуск: чат поверх игры + бот |
-| `..\start.bat --bot` | запустить и сразу открыть панель бота |
-| `..\start.bat --bot-demo` | демо-бот: фейковый чат без подключений |
-| `..\start.bat --no-bot` | только оверлей, без бота |
-| `..\start.bat --debug` | технический статус оверлея |
-| `start.bat` (этот файл) | приложение + панель бота |
-| `start.bat --demo` | то же, что `..\start.bat --bot-demo` |
+| `..\start.bat` | normal launch: in-game chat + bot |
+| `..\start.bat --bot` | launch and open the bot panel immediately |
+| `..\start.bat --bot-demo` | demo bot: fake chat without connections |
+| `..\start.bat --no-bot` | overlay only, no bot |
+| `..\start.bat --debug` | overlay technical status |
+| `start.bat` (this file) | app + bot panel |
+| `start.bat --demo` | same as `..\start.bat --bot-demo` |
 
-Остановка — трей → **«Остановить бота»**, вкладка **«Бот»** в настройках,
-или выход из приложения (`Ctrl + Alt + Q`). Бот успевает сохранить баллы и
-состояние розыгрыша.
+Stop it via tray → **"Stop bot"**, the **Bot** tab in settings, or by quitting
+the app (`Ctrl + Alt + Q`). The bot has time to save points and giveaway state.
 
 ---
 
-## Уведомления о стриме в Telegram
+## Telegram stream notifications
 
-Бот сам проверяет, идёт ли стрим (раз в минуту через Twitch API), и при
-переходе «офлайн → в эфире» отправляет сообщение в Telegram-канал: название,
-категорию, зрителей, превью и кнопку «Смотреть». Об одном и том же стриме
-повторно не пишет — в том числе после перезапуска бота.
+The bot checks whether the stream is live (once a minute via the Twitch API),
+and on the "offline → live" transition sends a message to the Telegram channel:
+title, category, viewers, preview, and a "Watch" button. It does not post twice
+about the same stream — including after a bot restart.
 
-Когда эфир заканчивается, бот присылает **справку по стриму**:
+When the stream ends, the bot sends a **stream summary**:
 
 ```
-📊 your_channel: стрим закончился
+📊 your_channel: stream ended
 
-⏱ Длительность: 2 ч 15 мин
-🏆 Пик зрителей: 128
-👀 Среднее: 74
+⏱ Duration: 2 h 15 min
+🏆 Peak viewers: 128
+👀 Average: 74
 
-💬 Чат: 342
-🤖 Сообщений от бота: 27
-🛡 Действий модерации: 3
+💬 Chat: 342
+🤖 Bot messages: 27
+🛡 Moderation actions: 3
 
-🕘 Начало: 21:18
-🕘 Конец: 23:33
+🕘 Start: 21:18
+🕘 End: 23:33
 
-▶️ Канал: https://twitch.tv/your_channel
+▶️ Channel: https://twitch.tv/your_channel
 ```
 
-- **Пик зрителей** — максимум из проверок Twitch API, пока шёл стрим.
-  Чем меньше `checkIntervalSec`, тем точнее пик (60 с — хороший баланс).
-- **Длительность** — время с начала эфира (по Twitch) до последней проверки,
-  когда эфир ещё шёл, — то есть стрим считается закончившимся в пределах
-  минуты от фактического конца.
-- **Среднее** — среднее по всем проверкам.
-- **Чат / бот** — сколько сообщений пришло в чат и сколько отправил бот
-  за время этого стрима.
-- **Модерация** — сколько действий (удалений, мутов, банов) сделал бот.
+- **Peak viewers** — the maximum from Twitch API checks while the stream was
+  live. The smaller `checkIntervalSec`, the more accurate the peak (60 s is a
+  good balance).
+- **Duration** — time from the stream start (per Twitch) to the last check when
+  the stream was still live — so the stream is considered ended within a minute
+  of the actual end.
+- **Average** — average across all checks.
+- **Chat / bot** — how many messages arrived in chat and how many the bot sent
+  during this stream.
+- **Moderation** — how many actions (deletions, timeouts, bans) the bot made.
 
-Справка приходит в течение `checkIntervalSec` после конца эфира. Бот для
-этого должен быть запущен — если закрыть приложение, проверять стрим и
-присылать итоги будет некому. Про автозапуск см. раздел ниже.
+The summary arrives within `checkIntervalSec` after the stream ends. The bot
+must be running for this — if you close the app, nobody will check the stream
+and send the summary. See the autostart section below.
 
-Если бот не видел эфир дольше 15 минут (был выключен, пропадала сеть),
-справка не отправляется — иначе пришлось бы написать про «стрим» с
-неизвестным концом. Итоги при этом всё равно попадают в историю.
+If the bot did not see the stream for more than 15 minutes (was off, network
+was down), the summary is not sent — otherwise it would have to describe a
+"stream" with an unknown end. The results still go into history.
 
-### Настройка (один раз)
+### Setup (once)
 
-1. В Telegram открой **@BotFather** → `/newbot` → придумай имя. Он выдаст
-   токен вида `123456789:AA...`.
-2. Добавь бота **администратором** в свой канал. Достаточно права
-   «Публикация сообщений».
-3. Открой настройки приложения (`Ctrl + Alt + S`) → вкладка
-   **«Уведомления»**.
-4. Вставь токен и канал: для публичного — `@имя_канала`, для приватного —
-   числовой ID `-100…`. Если уведомления должны идти в тему (topic)
-   супергруппы, укажи её номер.
-5. Нажми **«Отправить тестовое сообщение»** — оно должно прийти в канал.
-6. Включи **«Отправлять уведомления в Telegram»** (и при необходимости
-   «Присылать итоги после стрима») и нажми **«Сохранить»**. Бот
-   перезапустится сам.
+1. In Telegram, open **@BotFather** → `/newbot` → choose a name. It returns a
+   token like `123456789:AA...`.
+2. Add the bot as an **administrator** of your channel. "Post messages"
+   permission is enough.
+3. Open the app settings (`Ctrl + Alt + S`) → **Notifications** tab.
+4. Paste the token and channel: for a public one — `@channel_name`, for a
+   private one — numeric ID `-100…`. If notifications should go to a supergroup
+   topic, specify its number.
+5. Click **Send test message** — it should arrive in the channel.
+6. Enable **Send notifications to Telegram** (and, if needed, **Send summary
+   after stream**) and click **Save**. The bot restarts automatically.
 
-Можно и вручную — в `config.js` через `edit-config.bat`:
+You can also do it manually — in `config.js` via `edit-config.bat`:
 
 ```js
 streamAlerts: {
-  enabled: true,          // уведомления о начале стрима
-  offlineEnabled: true,   // справка об итогах, когда стрим закончился
+  enabled: true,          // stream-start notifications
+  offlineEnabled: true,   // summary when the stream ends
   telegram: {
     botToken: '123456789:AA...',
-    chatId: '@my_channel',   // или -1001234567890
-    messageThreadId: ''      // только для темы (topic) в супергруппе
+    chatId: '@my_channel',   // or -1001234567890
+    messageThreadId: ''      // only for a supergroup topic
   }
 }
 ```
 
-После ручной правки перезапусти бота: трей → «Перезапустить бота» (или
-вкладка «Бот» в настройках приложения).
+After a manual edit, restart the bot: tray → "Restart bot" (or the Bot tab in
+the app settings).
 
-Проверка без окна настроек: `test-alert.bat` — тест начала стрима,
-`test-alert.bat --end` — тест справки об итогах.
+Check without the settings window: `test-alert.bat` — stream-start test,
+`test-alert.bat --end` — summary test.
 
-Токен можно не хранить в файле, а задать переменные окружения
-`TELEGRAM_BOT_TOKEN` и `TELEGRAM_CHAT_ID` — они важнее значений из `config.js`.
+Instead of storing the token in a file, you can set the `TELEGRAM_BOT_TOKEN` and
+`TELEGRAM_CHAT_ID` environment variables — they take priority over `config.js`.
 
-### Настройки
+### Settings
 
-| Параметр | Что значит |
+| Parameter | Meaning |
 |---|---|
-| `enabled` | `true` — включить уведомления о начале стрима |
-| `offlineEnabled` | `true` (по умолчанию) — присылать справку об итогах, когда стрим закончился |
-| `checkIntervalSec` | как часто проверять стрим, 20–600 секунд (по умолчанию 60) |
-| `maxStartAgeMinutes` | не писать, если стрим идёт дольше N минут; `0` — писать всегда |
-| `silent` | `true` — уведомление без звука |
-| `sendPreview` | прикреплять превью стрима к сообщению |
-| `message` | текст о начале; подстановки `{channel} {title} {game} {viewers} {url} {youtube} {uptime} {started}` |
-| `offlineMessage` | текст справки об итогах (пусто — стандартный) |
-| `youtube` | ссылка на YouTube в уведомлении: канал (`https://youtube.com/@ник` — бот допишет `/live`) или готовое видео; пусто — без YouTube |
+| `enabled` | `true` — enable stream-start notifications |
+| `offlineEnabled` | `true` (default) — send the summary when the stream ends |
+| `checkIntervalSec` | how often to check the stream, 20–600 seconds (default 60) |
+| `maxStartAgeMinutes` | do not post if the stream has been live longer than N minutes; `0` — always post |
+| `silent` | `true` — notification without sound |
+| `sendPreview` | attach the stream preview to the message |
+| `message` | start text; placeholders `{channel} {title} {game} {viewers} {url} {youtube} {uptime} {started}` |
+| `offlineMessage` | summary text (empty — default) |
+| `youtube` | YouTube link in the notification: channel (`https://youtube.com/@handle` — the bot appends `/live`) or a ready video; empty — no YouTube |
 
-Подстановки в `offlineMessage`:
+Placeholders in `offlineMessage`:
 
-| Поле | Значение |
+| Field | Value |
 |---|---|
-| `{channel}` `{title}` `{game}` `{url}` `{date}` | канал, название и категория стрима, ссылка, дата |
-| `{duration}` | длительность текстом: `2 ч 15 мин` |
-| `{durationMinutes}` | длительность в минутах: `135` |
-| `{peak}` | пик зрителей |
-| `{average}` | среднее число зрителей по проверкам |
-| `{messages}` | сообщений в чате за стрим |
-| `{replies}` | сколько сообщений отправил бот |
-| `{commands}` | сколько команд (`!…`) написали зрители |
-| `{moderation}` | действий модерации |
-| `{started}` `{ended}` | время начала и конца (`21:18`) |
+| `{channel}` `{title}` `{game}` `{url}` `{date}` | channel, stream title and category, link, date |
+| `{duration}` | duration as text: `2 h 15 min` |
+| `{durationMinutes}` | duration in minutes: `135` |
+| `{peak}` | peak viewers |
+| `{average}` | average viewers across checks |
+| `{messages}` | chat messages during the stream |
+| `{replies}` | how many messages the bot sent |
+| `{commands}` | how many commands (`!…`) viewers wrote |
+| `{moderation}` | moderation actions |
+| `{started}` `{ended}` | start and end time (`21:18`) |
 
-Проверить настройки и текущий статус, ничего не отправляя:
+Check settings and current status without sending anything:
 
 ```
 test-alert.bat --check
 ```
 
-Итоги прошлых стримов сохраняются в `data/state.json` (раздел
-`streamHistory`, последние 20) и в `streamAlerts.history`; их же отдаёт
-панель бота через `/status` (поле `streams`).
+Results of past streams are saved in `data/state.json` (`streamHistory`
+section, last 20) and in `streamAlerts.history`; the bot panel also returns them
+via `/status` (the `streams` field).
 
-Если уведомления не приходят: проверь, что бот всё ещё администратор канала,
-токен не отозван, а в `data/bot.log` нет строк с `Telegram` или
-`Уведомление не отправлено`. Если не пришла только справка — ищи строку
-`Справка о завершении стрима не отправлена`.
+If notifications do not arrive: check that the bot is still a channel
+administrator, the token has not been revoked, and `data/bot.log` has no lines
+with `Telegram` or `Notification not sent`. If only the summary is missing, look
+for `Stream end summary not sent`.
 
 ---
 
-## Панель управления
+## Control panel
 
 <http://127.0.0.1:39001>
 
-Разделы:
+Sections:
 
-- **Обзор** — Twitch: подключение, канал, под каким аккаунтом, есть ли право
-  писать; счётчики сообщений и ответов; лента последних сообщений.
-- **Команды** — создать, изменить, выключить, дублировать и удалить команду.
-  Можно задать алиасы, права доступа, платформы, задержку и текст ответа.
-  Есть поиск, фильтр и живой предпросмотр.
-- **Автосообщения** — текст, интервал, платформы, включение/выключение.
-  Панель показывает, когда сработает следующее автосообщение.
-- **Ссылки** — адреса Twitch, YouTube, Discord, Telegram и других площадок;
-  они подставляются в `!social` и переменные вроде `{discord}`.
-- **Модерация** — включение, исключения, запрещённые слова, домены, капс,
-  спам и правила наказаний. Рядом видна статистика удалений, мутов и банов.
-- **Развлечения** — баллы, розыгрыши, викторина и тексты благодарностей за
-  подписки, рейды и битсы.
+- **Overview** — Twitch: connection, channel, which account, whether it can post;
+  message and reply counters; recent message feed.
+- **Commands** — create, edit, disable, duplicate, and delete a command. You can
+  set aliases, permissions, platforms, cooldown, and reply text. There is search,
+  filtering, and a live preview.
+- **Timers** — text, interval, platforms, enable/disable. The panel shows when
+  the next timed message will fire.
+- **Links** — Twitch, YouTube, Discord, Telegram, and other platform addresses;
+  they are inserted into `!social` and variables like `{discord}`.
+- **Moderation** — enable, exemptions, banned words, domains, caps, spam, and
+  punishment rules. Statistics for deletions, timeouts, and bans is shown next
+  to them.
+- **Games** — points, giveaways, quiz, and thank-you texts for subscriptions,
+  raids, and bits.
 
-Как сохраняется:
+How saving works:
 
-- изменения пишутся прямо в `config.js`, комментарии и остальные разделы
-  сохраняются;
-- перед каждой записью создаётся резервная копия `config.js.bak`;
-- файл заменяется атомарно, а после записи проверяется, что он остался
-  корректным;
-- работающий бот подхватывает новые команды и таймеры сразу, перезапуск
-  не нужен;
-- имена встроенных команд (`!help`, `!social`, `!uptime`, `!ping` и их
-  алиасы) занять нельзя.
+- changes are written directly to `config.js`; comments and other sections are
+  preserved;
+- a `config.js.bak` backup is created before each write;
+- the file is replaced atomically, and after writing it is checked to still be
+  valid;
+- the running bot picks up new commands and timers immediately, no restart
+  needed;
+- names of built-in commands (`!help`, `!social`, `!uptime`, `!ping`, and their
+  aliases) cannot be taken.
 
-Панель доступна только с этого компьютера (`127.0.0.1`), изменения
-принимаются только от самой панели (защита от сторонних запросов).
-Карточка YouTube появляется, только если YouTube включён в `config.js`.
+The panel is accessible only from this computer (`127.0.0.1`), and changes are
+accepted only from the panel itself (protection against third-party requests).
+The YouTube card appears only if YouTube is enabled in `config.js`.
 
 ---
 
-## Команды
+## Commands
 
-Встроенные (работают сразу):
+Built-in (work immediately):
 
-| Команда | Что отвечает |
+| Command | What it replies |
 |---|---|
-| `!help`, `!commands`, `!команды` | список доступных команд |
-| `!social`, `!ссылки` | все заполненные ссылки из `socials` |
-| `!uptime`, `!аптайм` | сколько идёт стрим на Twitch |
-| `!ping` | `понг 🏓` |
-| `!twitch`, `!твич` | ссылка на Twitch |
-| `!youtube`, `!ютуб` | ссылка на YouTube (это просто ссылка, чат там бот не читает) |
-| `!specs`, `!пк`, `!железо` | характеристики ПК (текст задаётся в `config.js`) |
-| `!ds`, `!дискорд` | ссылка на Discord из `socials.discord` |
-| `!game`, `!игра` | текущая категория стрима из Twitch API |
-| `!points`, `!баллы` | сколько баллов у зрителя |
-| `!top`, `!топ` | топ-5 зрителей по баллам |
-| `!daily`, `!бонус` | ежедневный бонус баллов |
-| `!give <ник> <сколько>` | перевести баллы другому зрителю |
-| `!join`, `!участвую` | участвовать в активном розыгрыше |
-| `!quiz start/stop/skip/status` | викторина (только модераторы) |
-| `!ga start <слово> <минут> [победителей] <приз>` | запустить розыгрыш (модераторы) |
-| `!ga stop`, `!ga cancel`, `!ga status` | завершить, отменить или проверить розыгрыш (модераторы) |
-| `!ban`, `!timeout`, `!unban`, `!delete`, `!modstats` | ручная модерация (модераторы) |
+| `!help`, `!commands` | list of available commands |
+| `!social` | all filled links from `socials` |
+| `!uptime` | how long the Twitch stream has been running |
+| `!ping` | `pong 🏓` |
+| `!twitch` | Twitch link |
+| `!youtube` | YouTube link (just a link; the bot does not read chat there) |
+| `!specs` | PC specs (text set in `config.js`) |
+| `!ds`, `!discord` | Discord link from `socials.discord` |
+| `!game` | current stream category from the Twitch API |
+| `!points` | viewer's points balance |
+| `!top` | top-5 viewers by points |
+| `!daily` | daily points bonus |
+| `!give <nick> <amount>` | transfer points to another viewer |
+| `!join` | join an active giveaway |
+| `!quiz start/stop/skip/status` | quiz (moderators only) |
+| `!ga start <word> <minutes> [winners] <prize>` | start a giveaway (moderators) |
+| `!ga stop`, `!ga cancel`, `!ga status` | finish, cancel, or check a giveaway (moderators) |
+| `!ban`, `!timeout`, `!unban`, `!delete`, `!modstats` | manual moderation (moderators) |
 
-Свои команды — в `config.js`:
+Custom commands — in `config.js`:
 
 ```js
 commands: [
   {
     name: 'discord',                 // !discord
-    aliases: ['дс', 'дискорд'],      // !дс, !дискорд
-    reply: 'Discord сообщества: {discord}',
+    aliases: ['ds'],                 // !ds
+    reply: 'Community Discord: {discord}',
     permission: 'everyone',          // everyone | mod | broadcaster
     platforms: ['twitch'],
-    cooldownMs: 10000,               // необязательно
+    cooldownMs: 10000,               // optional
     enabled: true
   }
 ]
 ```
 
-Доступные переменные в `reply`:
+Available variables in `reply`:
 
 ```
 {user} {channel} {platform} {uptime} {date} {time}
@@ -367,340 +373,339 @@ commands: [
 {socials} {youtube} {twitch} {discord}
 ```
 
-`{game}`, `{title}` и `{viewers}` берутся из Twitch API. Если стрим не идёт
-или API недоступен, подставится пустая строка.
+`{game}`, `{title}`, and `{viewers}` come from the Twitch API. If the stream is
+not live or the API is unavailable, an empty string is substituted.
 
-Особенности:
+Details:
 
-- `!help` не отдаётся зрителям, если команда только для модераторов.
-- Ответы автоматически обрезаются до 480 символов (лимит Twitch).
-- Задержки: 1,2 с между любыми ответами, 5 с на команду, 15 с на зрителя,
-  не больше 10 ответов в минуту. Всё настраивается в `bot`.
-- Имена и алиасы встроенных команд (`!points`, `!top`, `!quiz`, `!ga`,
-  `!ban` и остальных из таблицы) занять своей командой нельзя.
+- `!help` is not shown to viewers if a command is moderator-only.
+- Replies are automatically trimmed to 480 characters (Twitch limit).
+- Cooldowns: 1.2 s between any replies, 5 s per command, 15 s per viewer, no
+  more than 10 replies per minute. Everything is configured in `bot`.
+- Names and aliases of built-in commands (`!points`, `!top`, `!quiz`, `!ga`,
+  `!ban`, and the rest from the table) cannot be taken by a custom command.
 
-`!uptime` работает через Twitch Helix с вашим токеном. Если токена нет,
-бот честно ответит, что не может проверить.
+`!uptime` works through Twitch Helix with your token. If there is no token, the
+bot honestly replies that it cannot check.
 
 ---
 
-## Автосообщения
+## Timed messages
 
 ```js
 timers: [
   {
-    text: 'Подписывайся на YouTube: {youtube}',
+    text: 'Subscribe on YouTube: {youtube}',
     everyMinutes: 25,
     platforms: ['twitch']
   }
 ]
 ```
 
-Правила:
+Rules:
 
-- первое сообщение — только через полный интервал после запуска;
-- сообщение уходит, **только если в чате писали за последние 10 минут**
+- the first message only after a full interval since launch;
+- a message is sent **only if chat had activity in the last 10 minutes**
   (`bot.activityWindowMinutes`);
-- между любыми автосообщениями — минимум 2 минуты (`timersSettings.minGapMs`);
-- если чат молчит, таймер ждёт и не «догоняет» пропущенные показы.
+- at least 2 minutes between any timed messages (`timersSettings.minGapMs`);
+- if chat is silent, the timer waits and does not "catch up" on missed posts.
 
-Так бот не спамит в пустой чат и не выкладывает десяток сообщений после
-возвращения из AFK.
+This way the bot does not spam an empty chat or dump a dozen messages after
+returning from AFK.
 
 ---
 
-## Модерация и наказания
+## Moderation and punishments
 
-Модерация работает автоматически, если `moderation.enabled: true`. Бот должен
-быть **модератором канала** или вести канал со своего аккаунта: удаление,
-мут и бан отправляются обычными командами Twitch (`/delete`, `/timeout`,
-`/ban`, `/unban`), поэтому отдельных прав OAuth не требуется. Если бот не мод,
-Twitch просто отклонит команду — в чате это будет выглядеть так, будто
-наказание не сработало.
+Moderation works automatically if `moderation.enabled: true`. The bot must be a
+**channel moderator** or run the channel from its own account: deletion,
+timeout, and ban are sent as regular Twitch commands (`/delete`, `/timeout`,
+`/ban`, `/unban`), so no separate OAuth permissions are needed. If the bot is
+not a mod, Twitch simply rejects the command — in chat it looks as if the
+punishment did not work.
 
-Что проверяется:
+What is checked:
 
-| Нарушение | Как определяется |
+| Violation | How it is detected |
 |---|---|
-| Запрещённые слова | список `bannedWords.words`; `match: 'word'` — только целое слово, `'substring'` — вхождение |
-| Сторонние ссылки | любой домен, которого нет в `links.allow` и в разделе `socials` |
-| Капс | минимум `caps.minLength` букв и не меньше `caps.percent` % заглавных |
-| Флуд | больше `spam.maxMessages` сообщений за `spam.windowSec` секунд |
-| Повторы | одно и то же сообщение `spam.duplicateCount` раз за `spam.duplicateWindowSec` секунд |
-| Слишком длинное | длиннее `spam.maxLength` символов |
-| Спам символами | 12 одинаковых символов подряд или 10+ эмодзи |
+| Banned words | `bannedWords.words` list; `match: 'word'` — whole word only, `'substring'` — any occurrence |
+| Third-party links | any domain not in `links.allow` or the `socials` section |
+| Caps | at least `caps.minLength` letters and at least `caps.percent` % uppercase |
+| Flood | more than `spam.maxMessages` messages in `spam.windowSec` seconds |
+| Repeats | the same message `spam.duplicateCount` times in `spam.duplicateWindowSec` seconds |
+| Too long | longer than `spam.maxLength` characters |
+| Symbol spam | 12 identical characters in a row or 10+ emoji |
 
-Наказания:
+Punishments:
 
-- нарушение даёт страйк; страйки считаются за `punishment.strikeWindowMin`
-  минут, потом сбрасываются;
-- со 2-го страйка — мут на `timeoutSec` (по умолчанию 5 минут), каждый
-  следующий мут длиннее;
-- с 6-го страйка — бан;
-- сообщение удаляется сразу, а нарушителю раз в минуту пишется короткое
-  предупреждение (если `warnInChat: true`).
+- a violation gives a strike; strikes are counted for
+  `punishment.strikeWindowMin` minutes, then reset;
+- from the 2nd strike — a timeout for `timeoutSec` (5 minutes by default), each
+  next timeout is longer;
+- from the 6th strike — a ban;
+- the message is deleted immediately, and the offender gets a short warning
+  once a minute (if `warnInChat: true`).
 
-Модераторы, стример, подписчики и VIP по умолчанию не проверяются. Это
-меняется в `exempt`; туда же можно добавить конкретные ники в `exempt.users`.
+Moderators, the broadcaster, subscribers, and VIPs are not checked by default.
+This changes in `exempt`; specific nicknames can be added in `exempt.users`.
 
-Ручные команды (только для модераторов):
+Manual commands (moderators only):
 
 ```
-!ban <ник> [причина]
-!timeout <ник> [секунды] [причина]
-!unban <ник>
-!delete <ник|id сообщения>
+!ban <nick> [reason]
+!timeout <nick> [seconds] [reason]
+!unban <nick>
+!delete <nick|message id>
 !modstats
 ```
 
-Страйки и последнее действие сохраняются в `data/state.json`, статистика
-видна на вкладке **Модерация** в панели.
+Strikes and the last action are saved in `data/state.json`; statistics are shown
+on the **Moderation** tab in the panel.
 
 ---
 
-## Баллы (валюта канала)
+## Points (channel currency)
 
-Баллы начисляются за сообщения в чате: `points.perMessage` за сообщение, но
-не чаще раза в `points.messageCooldownSec` секунд. Боты из `bot.ignore`
-баллов не получают.
+Points are awarded for chat messages: `points.perMessage` per message, but no
+more often than once per `points.messageCooldownSec` seconds. Bots from
+`bot.ignore` do not receive points.
 
-| Команда | Что делает |
+| Command | What it does |
 |---|---|
-| `!points` | показывает баланс и место в топе |
-| `!top` | топ-5 зрителей |
-| `!daily` | ежедневный бонус `points.dailyBonus` раз в 24 часа |
-| `!give <ник> <сколько>` | перевод другому зрителю, минимум `points.transferMin` |
+| `!points` | shows the balance and leaderboard position |
+| `!top` | top-5 viewers |
+| `!daily` | daily bonus `points.dailyBonus` once per 24 hours |
+| `!give <nick> <amount>` | transfer to another viewer, minimum `points.transferMin` |
 
-Баланс хранится в `data/points.json` и переживает перезапуск. Максимум —
-`points.maxBalance`. Баллы тратятся на участие в розыгрышах, если задан
-`giveaways.entryCost`, и начисляются за правильные ответы в викторине.
+The balance is stored in `data/points.json` and survives restarts. Maximum —
+`points.maxBalance`. Points are spent on giveaway entry if `giveaways.entryCost`
+is set, and awarded for correct quiz answers.
 
-Перевести можно только тому, кто уже писал в чат: бот знает зрителей по
-сообщениям, а не по списку фолловеров.
+You can only transfer to someone who has already written in chat: the bot knows
+viewers by messages, not by the follower list.
 
 ---
 
-## Розыгрыши
+## Giveaways
 
-Запуск (модераторы):
+Start (moderators):
 
 ```
-!ga start <слово> <минут> [победителей] <приз>
+!ga start <word> <minutes> [winners] <prize>
 !ga status
-!ga stop      — завершить и выбрать победителей сейчас
-!ga cancel    — отменить без выбора
+!ga stop      — finish and pick winners now
+!ga cancel    — cancel without picking
 ```
 
-Пример: `!ga start приз 10 2 игра в Steam`.
+Example: `!ga start prize 10 2 Steam game`.
 
-Зрители участвуют, написав ключевое слово в чат, или командой `!join`.
-Один зритель — одна заявка (`allowMultiple: false`). Сообщения, начинающиеся
-с `!`, участием не считаются. Когда время выходит, бот случайно выбирает
-победителей и пишет их в чат. Если участников нет — сообщает об этом.
+Viewers enter by writing the keyword in chat or with `!join`. One viewer — one
+entry (`allowMultiple: false`). Messages starting with `!` do not count as
+entries. When time runs out, the bot randomly picks winners and posts them in
+chat. If there are no participants, it says so.
 
-`entryCost` задаёт стоимость участия в баллах; при нехватке баллов бот
-отвечает, сколько нужно. Списание невозвратное, в том числе при `!ga cancel`.
-Активный розыгрыш и список участников сохраняются в `data/state.json`, так
-что перезапуск бота его не сбрасывает.
+`entryCost` sets the entry cost in points; if the viewer does not have enough,
+the bot replies with the required amount. The charge is non-refundable, including
+on `!ga cancel`. The active giveaway and participant list are saved in
+`data/state.json`, so a bot restart does not reset them.
 
 ---
 
-## Викторина
+## Quiz
 
 ```
-!quiz start     — начать
-!quiz stop      — завершить
-!quiz skip      — пропустить текущий вопрос
-!quiz status    — сколько вопросов и правильных ответов
+!quiz start     — start
+!quiz stop      — finish
+!quiz skip      — skip the current question
+!quiz status    — how many questions and correct answers
 ```
 
-Команды доступны модераторам. Вопросы берутся из `quiz.questions`:
+Commands are available to moderators. Questions come from `quiz.questions`:
 
 ```js
 questions: [
-  { q: 'Сколько планет в Солнечной системе?', a: ['8', 'восемь'], hint: 'Их меньше девяти' }
+  { q: 'How many planets are in the Solar System?', a: ['8', 'eight'], hint: 'Fewer than nine' }
 ]
 ```
 
-`a` — список допустимых ответов (можно писать через `|`). Регистр, `ё`,
-пробелы и знаки препинания не важны, но ответ должен совпасть целиком.
-Первый правильный ответ получает `quiz.rewardPoints` баллов. На вопрос
-даётся `questionSeconds` секунд, через `hintAfterSeconds` появляется
-подсказка, между вопросами пауза `betweenSeconds`. `maxQuestions: 0` —
-идти, пока не закончатся вопросы. Вопросы перемешиваются при каждом запуске.
+`a` is a list of accepted answers (can also be written with `|`). Case, accents,
+spaces, and punctuation do not matter, but the answer must match entirely. The
+first correct answer receives `quiz.rewardPoints` points. A question lasts
+`questionSeconds` seconds, a hint appears after `hintAfterSeconds`, and there is
+a `betweenSeconds` pause between questions. `maxQuestions: 0` — continue until
+questions run out. Questions are shuffled on every start.
 
 ---
 
-## Благодарности за события
+## Event thanks
 
-Бот благодарит за:
+The bot thanks for:
 
-- новую подписку и продление (с числом месяцев);
-- подарочную подписку и массовый подарок;
-- рейд (если зрителей не меньше `events.minRaidViewers`);
-- битсы (от `events.minCheerBits`);
-- фоллоу.
+- a new subscription and renewal (with the number of months);
+- a gift subscription and mass gift;
+- a raid (if viewers are at least `events.minRaidViewers`);
+- bits (from `events.minCheerBits`);
+- follows.
 
-Тексты — в `events.messages`, подстановки: `{user}`, `{months}`,
-`{recipient}`, `{count}`, `{viewers}`, `{bits}`. Подписки, рейды и битсы
-приходят обычными сообщениями Twitch. **Фоллоу** приходят через EventSub:
-для них нужен повторный вход `auth-twitch.bat` с правом
-`moderator:read:followers`. Без этого права бот пишет в лог, что EventSub
-пропущен, и продолжает работать без уведомлений о фоллоу.
+Texts are in `events.messages`, placeholders: `{user}`, `{months}`,
+`{recipient}`, `{count}`, `{viewers}`, `{bits}`. Subscriptions, raids, and bits
+arrive as regular Twitch messages. **Follows** arrive via EventSub: they require
+logging in again via **Settings → Twitch** (or `auth-twitch.bat`) with the
+`moderator:read:followers` scope. Without this scope the bot logs that EventSub
+was skipped and keeps working without follow notifications.
 
 ---
 
-## Файлы
+## Files
 
 ```
 chat-desktop/bot/
-├── start.bat               запустить приложение и открыть панель бота
-├── open-panel.bat          то же самое (для старого ярлыка)
-├── panel.ico               иконка для ярлыка панели
-├── edit-config.bat         открыть config.js в Блокноте
-├── check-config.bat        проверить настройки и токены
-├── auth-twitch.bat         вход в Twitch
-├── auth-youtube.bat        вход в YouTube (сейчас не нужен)
-├── test-alert.bat          тест уведомления в Telegram
-├── config.js               ВСЕ настройки: канал, команды, таймеры, тексты
+├── start.bat               launch the app and open the bot panel
+├── open-panel.bat          same (for the old shortcut)
+├── panel.ico               icon for the panel shortcut
+├── edit-config.bat         open config.js in Notepad
+├── check-config.bat        validate settings and tokens
+├── auth-twitch.bat         Twitch login (legacy helper)
+├── auth-youtube.bat        YouTube login (not needed now)
+├── test-alert.bat          test a Telegram notification
+├── config.js               ALL settings: channel, commands, timers, texts
 ├── src/
-│   ├── index.js            сборка приложения и демо-режим
-│   ├── twitch.js           Twitch IRC (чтение и отправка)
-│   ├── stream-alerts.js    уведомления о стриме в Telegram
-│   ├── stream-stats.js     справка по стриму: пик зрителей, длительность, чат
-│   ├── youtube.js          YouTube (выключен, оставлен на будущее)
-│   ├── engine.js           команды, права, задержки, переменные
-│   ├── moderation.js       спам, запрещённые слова, ссылки, мут и бан
-│   ├── points.js           баллы, ежедневный бонус, переводы, топ
-│   ├── giveaway.js         розыгрыши по слову и !join
-│   ├── quiz.js             викторина с вопросами и наградами
-│   ├── events.js           благодарности за подписки, рейды и битсы
-│   ├── eventsub.js         фоллоу через Twitch EventSub
-│   ├── timers.js           автосообщения
-│   ├── panel.js            API для визуального редактора
-│   ├── config-editor.js    безопасная запись разделов в config.js
-│   ├── status.js           локальный HTTP-сервер панели
-│   ├── web/                HTML, CSS и JS панели (без сборки)
-│   ├── auth-twitch.js      device code flow Twitch
-│   ├── auth-youtube.js     OAuth Google (не используется)
-│   └── …                   вспомогательные модули
-├── test/                   тесты (node --test)
+│   ├── index.js            app assembly and demo mode
+│   ├── twitch.js           Twitch IRC (read and send)
+│   ├── stream-alerts.js    Telegram stream notifications
+│   ├── stream-stats.js     stream summary: peak viewers, duration, chat
+│   ├── youtube.js          YouTube (disabled, kept for the future)
+│   ├── engine.js           commands, permissions, cooldowns, variables
+│   ├── moderation.js       spam, banned words, links, timeout and ban
+│   ├── points.js           points, daily bonus, transfers, top
+│   ├── giveaway.js         keyword and !join giveaways
+│   ├── quiz.js             quiz with questions and rewards
+│   ├── events.js           thanks for subscriptions, raids, and bits
+│   ├── eventsub.js         follows via Twitch EventSub
+│   ├── timers.js           timed messages
+│   ├── panel.js            API for the visual editor
+│   ├── config-editor.js    safe section writing into config.js
+│   ├── status.js           local panel HTTP server
+│   ├── web/                panel HTML, CSS, and JS (no build step)
+│   ├── auth-twitch.js      Twitch device code flow
+│   ├── auth-youtube.js     Google OAuth (unused)
+│   └── …                   helper modules
+├── test/                   tests (node --test)
 └── data/
-    ├── tokens.json         токен Twitch (не выкладывать!)
-    ├── state.json          состояние таймеров, розыгрыша и страйков
-    ├── points.json         балансы зрителей
-    └── bot.log             журнал
+    ├── tokens.json         Twitch token (never publish!)
+    ├── state.json          timer, giveaway, and strike state
+    ├── points.json         viewer balances
+    └── bot.log             log
 ```
 
-Токены лежат только на этом компьютере. В `.gitignore` они исключены.
+Tokens live only on this computer. They are excluded in `.gitignore`.
 
 ---
 
-## Связка с оверлеем
+## Relationship with the overlay
 
 ```
-chat-overlay/          — чат в OBS (только показывает)
-chat-desktop/          — окно поверх игры + настройки + этот бот
-chat-desktop/bot/      — бот: читает и пишет в Twitch
+chat-overlay/          — chat in OBS (display only)
+chat-desktop/          — in-game window + settings + this bot
+chat-desktop/bot/      — bot: reads and writes Twitch
 ```
 
-- Бот **не показывает** сообщения в эфире — за это отвечает оверлей.
-- Бот запускается приложением и останавливается вместе с ним.
-- Канал Twitch и данные YouTube хранятся в `bot/config.js`; их обновляет
-  вкладка «Аккаунты и каналы» в настройках приложения. Вручную тоже можно —
-  через `edit-config.bat`.
+- The bot **does not display** messages on stream — the overlay handles that.
+- The bot is started by the app and stopped with it.
+- The Twitch channel and YouTube data are stored in `bot/config.js`; they are
+  updated by the "Accounts & Channels" tab in the app settings. Manual editing
+  is also possible via `edit-config.bat`.
 
 ---
 
-## Если что-то не работает
+## Troubleshooting
 
-| Симптом | Причина и решение |
+| Symptom | Cause and solution |
 |---|---|
-| Двойной клик по `config.js` ничего не делает | так и должно быть: это файл настроек, а не программа. Правь его через `edit-config.bat`, бота запускает приложение |
-| `Twitch: нет токена` | не выполнен `auth-twitch.bat` или истёк доступ. Запусти его снова |
-| `Twitch не принял токен` | токен отозван или вход выполнен не тем аккаунтом. `auth-twitch.bat` заново |
-| Twitch пишет `login_authentication_failed` | неверный Client ID или приложение удалено. Проверь `config.js` |
-| Бот молчит в Twitch | аккаунт бота забанен/замьючен, канал в режиме «только подписчики», а бот не мод и не фолловер. Сделай бота модератором |
-| Модерация не удаляет и не мутит | бот не модератор канала. Дай ему мод-права или запусти бота с аккаунта стримера |
-| Фоллоу не благодарит | токен старый, без `moderator:read:followers`. Запусти `auth-twitch.bat` заново |
-| Баллы не начисляются | `points.enabled: false`, не прошёл кулдаун `messageCooldownSec` или зритель в `bot.ignore` |
-| Розыгрыш не запускается | уже идёт другой, выключен `giveaways.enabled` или в ключевом слове есть пробел |
-| Викторина не запускается | в `quiz.questions` нет вопросов или `quiz.enabled: false` |
-| `!ds` отвечает пустой ссылкой | заполни `socials.discord` в `config.js` |
-| Панель не запустилась | порт 39001 занят. Останови старого бота на вкладке «Бот» или поменяй `statusPort` в `config.js` |
-| Ярлык не открывает панель | запусти `open-panel.bat` вручную. Он открывает приложение; если Electron не установлен, переустанови приложение |
-| Команда не отвечает | проверь `!help`: возможно, она выключена, не для этой платформы или сработала задержка |
-| Кириллица в консоли «кракозябрами» | консоль больше не нужна: смотри `data/bot.log` или панель |
-| Уведомления в Telegram не приходят | проверь `enabled: true`, `botToken` и `chatId`; бот должен быть админом канала. Запусти `test-alert.bat` и посмотри текст ошибки |
-| Не пришла справка об итогах стрима | проверь `offlineEnabled: true`; в `data/bot.log` ищи `Справка о завершении стрима не отправлена`. Если бот не работал во время стрима — справки не будет |
-| Пик зрителей меньше реального | пик считается по проверкам Twitch API: уменьши `checkIntervalSec` (например, до 30) |
-| YouTube-карточки нет на панели | так и задумано: YouTube выключен, бот работает только с Twitch |
+| Double-clicking `config.js` does nothing | expected: it is a settings file, not a program. Edit it via `edit-config.bat`; the app starts the bot |
+| `Twitch: no token` | Twitch login was not completed or access expired. Open Settings → Twitch and log in again |
+| `Twitch rejected the token` | the token was revoked or login was done with the wrong account. Log in again via Settings → Twitch |
+| Twitch says `login_authentication_failed` | wrong Client ID or the app was deleted. Check the Client ID on the Twitch tab |
+| Bot is silent on Twitch | the bot account is banned/timed out, the channel is in "subscribers-only" mode, and the bot is not a mod or follower. Make the bot a moderator |
+| Moderation does not delete or time out | the bot is not a channel moderator. Give it mod rights or run the bot from the streamer's account |
+| Follows are not thanked | the token is old, without `moderator:read:followers`. Log in again via Settings → Twitch |
+| Points are not awarded | `points.enabled: false`, the `messageCooldownSec` cooldown has not passed, or the viewer is in `bot.ignore` |
+| Giveaway does not start | another one is already running, `giveaways.enabled` is off, or the keyword contains a space |
+| Quiz does not start | `quiz.questions` is empty or `quiz.enabled: false` |
+| `!ds` replies with an empty link | fill in `socials.discord` in `config.js` |
+| Panel did not start | port 39001 is busy. Stop the old bot on the Bot tab or change `statusPort` in `config.js` |
+| Shortcut does not open the panel | run `open-panel.bat` manually. It opens the app; if Electron is not installed, reinstall the app |
+| Command does not reply | check `!help`: it may be disabled, not for this platform, or on cooldown |
+| Cyrillic in the console is garbled | the console is no longer needed: see `data/bot.log` or the panel |
+| Telegram notifications do not arrive | check `enabled: true`, `botToken`, and `chatId`; the bot must be a channel admin. Run `test-alert.bat` and read the error |
+| Stream summary did not arrive | check `offlineEnabled: true`; look for `Stream end summary not sent` in `data/bot.log`. If the bot was off during the stream, there will be no summary |
+| Peak viewers is lower than real | the peak is calculated from Twitch API checks: reduce `checkIntervalSec` (for example, to 30) |
+| No YouTube card in the panel | by design: YouTube is disabled, the bot works with Twitch only |
 
-Журнал: `data/bot.log`. Подробнее — приложение с флагом `--debug`.
+Log: `data/bot.log`. For more detail, run the app with `--debug`.
 
 ---
 
-## Проверка кода
+## Code checks
 
 ```
 cd chat-desktop/bot
 node --test
 ```
 
-124 теста: команды, права, задержки, обрезка сообщений, таймеры, логин Twitch,
-уведомления в Telegram (начало и итоги стрима), модерация и наказания,
-баллы, розыгрыши, викторина, благодарности за события и редактор
-`config.js` (валидация, резервные копии,
-сохранение комментариев).
-(Если npm не блокирован политикой Windows — можно `npm test`.)
+142 tests: commands, permissions, cooldowns, message trimming, timers, Twitch
+login, Telegram notifications (stream start and summary), moderation and
+punishments, points, giveaways, quiz, event thanks, `config.js` sync, and the
+`config.js` editor (validation, backups, comment preservation).
+(If npm is blocked by Windows policy, `npm test` also works.)
 
 ---
 
-## Автозапуск с Windows (по желанию)
+## Autostart with Windows (optional)
 
 1. `Win + R` → `shell:startup` → Enter.
-2. Положи туда ярлык «Чат поверх игры» (из папки `chat-desktop`).
+2. Put the "Chat over game" shortcut there (from the `chat-desktop` folder).
 
-Приложение поднимется вместе с системой и запустит бота. Если стрима нет —
-бот просто ждёт и ничего не пишет.
-
----
-
-## Ограничения
-
-- Один Twitch-канал. Несколько каналов потребуют отдельной настройки.
-- Модерация работает только пока бот модератор канала (или это аккаунт
-  стримера). Проверки простые: список слов, домены, капс и частота сообщений.
-  Замаскированные ссылки и «обход» запрещённых слов через символы могут
-  проскочить.
-- Баллы получают только те, кто пишет в чат. Магазина баллов нет — тратить
-  их можно на участие в розыгрышах.
-- Одновременно идёт один розыгрыш; повторов по расписанию нет. Стоимость
-  участия не возвращается при отмене.
-- В викторине ответ должен совпасть с одним из вариантов целиком (без учёта
-  регистра и знаков препинания).
-- Фоллоу приходят через EventSub, только когда бот запущен и токен выдан
-  заново с нужным правом. Пропущенные за время выключения фоллоу не
-  восстанавливаются.
-- Twitch-лимиты: 20 сообщений за 30 секунд; бот дополнительно держит паузу
-  1,6 с и очередь.
-- Сообщения, начинающиеся с `!`, но адресованные другому боту, всё равно
-  будут проверены по списку команд; неизвестные команды бот молча пропускает.
+The app starts with the system and launches the bot. If there is no stream, the
+bot just waits and posts nothing.
 
 ---
 
-## YouTube (необязательно, сейчас выключен)
+## Limitations
 
-Код YouTube остался в проекте, но `youtube.enabled: false` — никакого
-Google-доступа не требуется. Если когда-нибудь понадобится:
+- One Twitch channel. Multiple channels would require separate configuration.
+- Moderation works only while the bot is a channel moderator (or is the
+  streamer's account). Checks are simple: word list, domains, caps, and message
+  frequency. Disguised links and banned-word "bypasses" using symbols may slip
+  through.
+- Points are earned only by those who write in chat. There is no points shop —
+  they can be spent on giveaway entries.
+- One giveaway at a time; no scheduled repeats. The entry cost is not refunded
+  on cancel.
+- In the quiz, the answer must match one of the variants entirely (case and
+  punctuation are ignored).
+- Follows arrive via EventSub only when the bot is running and the token was
+  issued again with the required scope. Follows missed while the bot was off are
+  not restored.
+- Twitch limits: 20 messages per 30 seconds; the bot additionally keeps a 1.6 s
+  pause and a queue.
+- Messages starting with `!` but addressed to another bot are still checked
+  against the command list; unknown commands are silently skipped.
 
-1. В Google Cloud включи **YouTube Data API v3**.
-2. Создай **OAuth client ID** типа **Desktop app** и положи JSON в
+---
+
+## YouTube (optional, currently disabled)
+
+The YouTube code remains in the project, but `youtube.enabled: false` — no Google
+access is required. If you ever need it:
+
+1. In Google Cloud, enable **YouTube Data API v3**.
+2. Create an **OAuth client ID** of type **Desktop app** and put the JSON in
    `data/google-oauth.json`.
-3. Запусти `auth-youtube.bat` и войди аккаунтом канала.
-4. В `config.js` поставь `youtube.enabled: true` и перезапусти бота
-   (трей → «Перезапустить бота»).
+3. Run `auth-youtube.bat` and log in with the channel account.
+4. In `config.js`, set `youtube.enabled: true` and restart the bot
+   (tray → "Restart bot").
 
-Учти: отправка одного сообщения в YouTube стоит 20 единиц дневной квоты
-(по умолчанию ~50 ответов в день), а пока приложение Google в статусе
-**Testing**, вход придётся повторять раз в 7 дней.
+Note: sending one YouTube message costs 20 units of daily quota (about 50
+replies per day by default), and while the Google app is in **Testing** status,
+you have to log in again every 7 days.

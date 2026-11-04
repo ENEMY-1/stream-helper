@@ -47,8 +47,9 @@ window.CHAT_CONFIG = {
   // Размер шрифта в пикселях (от него масштабируется весь оверлей).
   fontSize: 24,
 
-  // Тема оформления: 'classic', 'glass', 'neon', 'soft', 'minimal' или 'streamlabs'.
-  // Можно переопределить в адресе: overlay.html?theme=streamlabs
+  // Тема оформления: 'classic', 'glass', 'neon', 'soft', 'minimal' или 'modern'.
+  // Можно переопределить в адресе: overlay.html?theme=modern
+  // Старое имя 'streamlabs' автоматически считается темой 'modern'.
   theme: 'classic',
 
   // Показывать цветную плашку платформы (TWITCH / YOUTUBE / KICK).

@@ -169,35 +169,50 @@
   var text = document.getElementById('text');
   var details = document.getElementById('details');
   var hint = document.getElementById('hint');
+  var retry = document.getElementById('retry');
+
+  var bridge = window.i18n || {};
+  var lang = bridge.language === 'en' ? 'en' : 'ru';
+  var locale = (bridge.locales && bridge.locales[lang]) || {};
+
+  function t(key) {
+    return locale[key] != null ? locale[key] : key;
+  }
+
+  document.documentElement.lang = lang;
+  document.title = t('botPanelWindowTitle');
+  retry.textContent = t('botSplashRetry');
 
   function loading() {
     box.classList.remove('error');
-    title.textContent = 'Запускаю бота…';
-    text.textContent = 'Проверяю настройки и подключаюсь к чату.';
+    title.textContent = t('botSplashTitle');
+    text.textContent = t('botSplashText');
     details.textContent = '';
-    hint.textContent = 'Панель откроется автоматически, как только бот будет готов.';
+    hint.textContent = t('botSplashHint');
   }
 
   // Вызывается главным процессом, если бот не поднялся.
   window.botPanelFail = function (info) {
     box.classList.add('error');
-    title.textContent = 'Бот не запустился';
-    text.textContent = 'Приложение не смогло дождаться панели бота.';
+    title.textContent = t('botSplashErrorTitle');
+    text.textContent = t('botSplashErrorText');
     var message = info && info.message ? String(info.message) : '';
     var log = info && info.log ? String(info.log) : '';
-    details.textContent = message + (log ? '\n\nЖурнал: ' + log : '');
-    hint.textContent = 'Исправь ошибку и нажми «Повторить». Журнал также лежит в папке bot\\data.';
+    details.textContent = message + (log ? '\n\n' + t('botSplashLogPrefix') + log : '');
+    hint.textContent = t('botSplashErrorHint');
   };
 
-  document.getElementById('retry').addEventListener('click', function () {
+  retry.addEventListener('click', function () {
     loading();
     if (window.botPanelApi && typeof window.botPanelApi.retry === 'function') {
       window.botPanelApi.retry();
     } else {
-      title.textContent = 'Нет связи с приложением';
-      text.textContent = 'Открой панель бота из трея «Stream Helper — чат и бот».';
+      title.textContent = t('botSplashNoConnection');
+      text.textContent = t('botSplashNoConnectionText');
     }
   });
+
+  loading();
 })();
 </script>
 </body>

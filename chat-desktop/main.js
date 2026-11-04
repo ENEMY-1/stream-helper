@@ -9,8 +9,17 @@ const fs = require('node:fs');
 const http = require('node:http');
 const vm = require('node:vm');
 const { spawn } = require('node:child_process');
-const { syncBotConfig, readStreamAlerts, syncStreamAlerts } = require('./bot-sync');
+const {
+  syncBotConfig,
+  readStreamAlerts,
+  syncStreamAlerts,
+  readTwitchConfig,
+  syncTwitchConfig
+} = require('./bot-sync');
 const { YouTubeWebReader } = require('./yt-live');
+const { normalizeLanguage, getLocale } = require('./i18n');
+const { startDeviceFlow, pollDeviceToken, fetchCurrentUser } = require('./bot/src/twitch-auth');
+const { TokenStore } = require('./bot/src/tokens');
 
 const APP_DIR = __dirname;
 const STATE_FILE = path.join(APP_DIR, 'position.json');
@@ -19,7 +28,15 @@ const LOG_FILE = path.join(APP_DIR, 'app.log');
 // а не маленький .png.
 const ICON_FILE = path.join(APP_DIR, process.platform === 'win32' ? 'icon.ico' : 'icon.png');
 const YT_RELAY_PORT = 38999;
-const CHAT_THEMES = ['classic', 'glass', 'neon', 'soft', 'minimal', 'streamlabs'];
+const CHAT_THEMES = ['classic', 'glass', 'neon', 'soft', 'minimal', 'modern'];
+
+// Раньше тема называлась streamlabs. Оставляем совместимость со старыми
+// сохранёнными настройками и ссылками вида ?theme=streamlabs.
+function normalizeTheme(value) {
+  const theme = String(value == null ? '' : value).trim().toLowerCase();
+  if (theme === 'streamlabs') return 'modern';
+  return CHAT_THEMES.indexOf(theme) !== -1 ? theme : 'classic';
+}
 
 // Чат-бот теперь часть этого приложения: код и настройки лежат в bot/.
 const BOT_DIR = path.join(APP_DIR, 'bot');
@@ -239,8 +256,8 @@ function normalizeSettings(raw) {
     maxMessages: Math.round(clampNumber(source.maxMessages, 1, 100, 14)),
     fontSize: Math.round(clampNumber(source.fontSize, 10, 72, 24)),
     bgOpacity: Math.round(clampNumber(source.bgOpacity, 0, 100, 58)),
-    theme: CHAT_THEMES.indexOf(String(source.theme || '').toLowerCase()) !== -1
-      ? String(source.theme).toLowerCase() : 'classic',
+    theme: normalizeTheme(source.theme),
+    language: normalizeLanguage(source.language),
     showPlatform: source.showPlatform !== false,
     align: source.align === 'top' ? 'top' : 'bottom',
     demo: source.demo === true,
@@ -262,6 +279,48 @@ function loadSettings() {
     configFile: configPath(),
     bot: botConfigInfo(),
     botProcess: botStatus()
+  };
+}
+
+function currentLanguage() {
+  const settings = loadSettings().settings;
+  return { language: settings.language, resolved: uiLanguage() };
+}
+
+// Язык интерфейса главного процесса: окна, трей и подсказки.
+// «Авто» берёт язык Windows, а не язык страницы настроек.
+function systemLanguage() {
+  let locale = '';
+  try { locale = app.getLocale ? app.getLocale() : ''; } catch (error) { /* ignore */ }
+  return String(locale).toLowerCase().indexOf('ru') === 0 ? 'ru' : 'en';
+}
+
+function uiLanguage() {
+  const lang = loadSettings().settings.language;
+  return lang === 'auto' ? systemLanguage() : lang;
+}
+
+function uiText(key) {
+  const dict = getLocale(uiLanguage());
+  return dict && dict[key] != null ? dict[key] : key;
+}
+
+// Язык меняется сразу и сохраняется отдельно от кнопки «Сохранить»:
+// иначе переключение выглядело бы как неработающее до перезапуска.
+function setLanguage(raw) {
+  const settings = loadSettings().settings;
+  settings.language = normalizeLanguage(raw);
+  const saved = writeSettings(settings);
+  log('language changed', saved.language);
+  updateTrayMenu();
+  if (settingsWin && !settingsWin.isDestroyed()) {
+    settingsWin.setTitle(uiText('settingsWindowTitle'));
+  }
+  return {
+    ok: true,
+    language: saved.language,
+    resolved: uiLanguage(),
+    settings: saved
   };
 }
 
@@ -650,7 +709,7 @@ function openBotPanel() {
     height: 850,
     minWidth: 860,
     minHeight: 600,
-    title: 'Бот — Stream Helper',
+    title: uiText('botPanelWindowTitle'),
     icon: fs.existsSync(ICON_FILE) ? ICON_FILE : undefined,
     backgroundColor: '#0b0c13',
     autoHideMenuBar: true,
@@ -659,6 +718,9 @@ function openBotPanel() {
       preload: BOT_PANEL_PRELOAD,
       contextIsolation: true,
       nodeIntegration: false,
+      // preload подключает ./i18n и читает аргумент с языком
+      sandbox: false,
+      additionalArguments: ['--ui-language=' + uiLanguage()],
       devTools: FLAGS.debug,
       spellcheck: false
     }
@@ -1380,7 +1442,7 @@ function openSettingsWindow() {
     height: 780,
     minWidth: 680,
     minHeight: 560,
-    title: 'Настройки чата',
+    title: uiText('settingsWindowTitle'),
     icon: fs.existsSync(ICON_FILE) ? ICON_FILE : undefined,
     backgroundColor: '#0b0c13',
     autoHideMenuBar: true,
@@ -1389,6 +1451,9 @@ function openSettingsWindow() {
       preload: path.join(APP_DIR, 'settings-preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
+      // preload подключает ./i18n, а в песочнице относительный require
+      // недоступен — окно настроек работает вне sandbox.
+      sandbox: false,
       devTools: FLAGS.debug,
       spellcheck: false
     }
@@ -1609,6 +1674,232 @@ async function testAlerts(raw) {
   };
 }
 
+// --- Twitch-авторизация бота ------------------------------------------------
+// Раньше вход выполнялся через auth-twitch.bat и правку config.js.
+// Теперь те же device-code запросы идут из главного процесса, а окно
+// настроек показывает код, ссылку и статус.
+
+const TWITCH_TOKENS = path.join(BOT_DIR, 'data', 'tokens.json');
+const twitchTokenLog = {
+  info: function () { log.apply(null, ['twitch tokens'].concat(Array.prototype.slice.call(arguments))); },
+  warn: function () { log.apply(null, ['twitch tokens'].concat(Array.prototype.slice.call(arguments))); },
+  error: function () { log.apply(null, ['twitch tokens'].concat(Array.prototype.slice.call(arguments))); }
+};
+twitchTokenLog.child = function () { return twitchTokenLog; };
+
+let twitchAuthSession = null;
+
+function twitchTokenStore() {
+  return new TokenStore(TWITCH_TOKENS, twitchTokenLog);
+}
+
+function normalizeTwitchValues(raw) {
+  const source = raw || {};
+  return {
+    clientId: String(source.clientId == null ? '' : source.clientId).trim(),
+    clientSecret: String(source.clientSecret == null ? '' : source.clientSecret).trim(),
+    botUsername: String(source.botUsername == null ? '' : source.botUsername).trim()
+      .replace(/^[@#]+/, '')
+      .replace(/\s+/g, '')
+      .toLowerCase()
+  };
+}
+
+function twitchAuthState() {
+  const config = readTwitchConfig(BOT_CONFIG);
+  const values = config && config.ok ? config.values : {};
+  const token = twitchTokenStore().twitch || {};
+  const expiresAt = Number(token.expires_at) || 0;
+  const expired = !!expiresAt && expiresAt - 60000 <= Date.now();
+  const session = twitchAuthSession;
+  const pending = !!(session && session.active);
+  return {
+    ok: true,
+    file: BOT_CONFIG,
+    tokensFile: TWITCH_TOKENS,
+    configOk: !!(config && config.ok),
+    clientId: values.clientId || '',
+    clientSecret: values.clientSecret || '',
+    botUsername: values.botUsername || token.login || '',
+    authorized: !!(token.access_token && !expired),
+    hasToken: !!token.access_token,
+    expired: expired,
+    login: token.login || '',
+    displayName: token.display_name || '',
+    userId: token.user_id || '',
+    scope: Array.isArray(token.scope) ? token.scope : [],
+    expiresAt: expiresAt || 0,
+    pending: pending,
+    userCode: session ? session.userCode : '',
+    verificationUri: session ? session.verificationUri : '',
+    expiresIn: pending ? Math.max(0, Math.round((session.deadline - Date.now()) / 1000)) : 0,
+    error: session ? session.error : ''
+  };
+}
+
+function twitchSaveValues(raw) {
+  const values = normalizeTwitchValues(raw);
+  const result = syncTwitchConfig(values, { file: BOT_CONFIG, log: log });
+  if (!result.ok) {
+    return {
+      ok: false,
+      error: result.reason === 'not-found'
+        ? 'Не найден bot/config.js: ' + BOT_CONFIG
+        : (result.message || 'Не удалось записать bot/config.js'),
+      errorKey: 'twitchAuthSaveFailed'
+    };
+  }
+  return { ok: true, changed: result.changed, values: result.values };
+}
+
+function twitchAuthSave(raw) {
+  const saved = twitchSaveValues(raw);
+  if (!saved.ok) return saved;
+  return Object.assign(twitchAuthState(), {
+    ok: true,
+    saved: true,
+    changed: saved.changed
+  });
+}
+
+function scheduleTwitchPoll(ms) {
+  if (!twitchAuthSession || !twitchAuthSession.active) return;
+  if (twitchAuthSession.timer) clearTimeout(twitchAuthSession.timer);
+  twitchAuthSession.timer = setTimeout(function () { pollTwitchAuthSession(); }, ms);
+}
+
+function finishTwitchSession(errorCode) {
+  if (!twitchAuthSession) return;
+  twitchAuthSession.active = false;
+  twitchAuthSession.error = errorCode || '';
+  if (twitchAuthSession.timer) {
+    clearTimeout(twitchAuthSession.timer);
+    twitchAuthSession.timer = null;
+  }
+  if (errorCode) log('twitch auth stopped', errorCode);
+}
+
+async function pollTwitchAuthSession() {
+  const session = twitchAuthSession;
+  if (!session || !session.active) return;
+
+  if (Date.now() > session.deadline) {
+    finishTwitchSession('expired');
+    return;
+  }
+
+  try {
+    const tokens = await pollDeviceToken(session.clientId, session.deviceCode);
+    const user = await fetchCurrentUser(session.clientId, tokens.access_token);
+
+    twitchTokenStore().setTwitch({
+      access_token: tokens.access_token,
+      refresh_token: tokens.refresh_token,
+      scope: tokens.scope || tokens.scopes || ['chat:read', 'chat:edit'],
+      token_type: tokens.token_type || 'bearer',
+      expires_at: Date.now() + (Number(tokens.expires_in) || 0) * 1000,
+      obtained_at: new Date().toISOString(),
+      login: user ? user.login : '',
+      user_id: user ? user.id : '',
+      display_name: user ? user.display_name : ''
+    });
+
+    // Логин бота подставляем в config.js, чтобы панель и проверка настроек
+    // сразу видели, от какого аккаунта работает бот.
+    if (user && user.login) {
+      syncTwitchConfig({
+        clientId: session.clientId,
+        clientSecret: session.clientSecret,
+        botUsername: user.login
+      }, { file: BOT_CONFIG, log: log });
+    }
+
+    finishTwitchSession('');
+    log('twitch auth success', user ? '@' + user.login : 'unknown');
+
+    if (bot.state === 'running' || bot.state === 'starting') {
+      restartBot().catch(function (error) { log('bot restart after twitch auth failed', error.message); });
+    }
+  } catch (error) {
+    const message = String(error && error.message ? error.message : error);
+    if (/authorization_pending/i.test(message)) {
+      scheduleTwitchPoll(session.interval * 1000);
+      return;
+    }
+    if (/slow_down/i.test(message)) {
+      session.interval += 5;
+      scheduleTwitchPoll(session.interval * 1000);
+      return;
+    }
+    if (/expired_token/i.test(message)) {
+      finishTwitchSession('expired');
+      return;
+    }
+    if (/access_denied/i.test(message)) {
+      finishTwitchSession('denied');
+      return;
+    }
+    finishTwitchSession('error:' + message);
+  }
+}
+
+async function twitchAuthStart(raw) {
+  if (twitchAuthSession && twitchAuthSession.active) {
+    return { ok: false, errorKey: 'twitchAuthAlreadyPending' };
+  }
+
+  const values = normalizeTwitchValues(raw);
+  if (!values.clientId) return { ok: false, errorKey: 'twitchAuthNeedClientId' };
+
+  const saved = twitchSaveValues(values);
+  if (!saved.ok) return saved;
+
+  let device;
+  try {
+    device = await startDeviceFlow(values.clientId);
+  } catch (error) {
+    const message = String(error && error.message ? error.message : error);
+    log('twitch device flow failed', message);
+    return { ok: false, error: message, errorKey: 'twitchAuthLoginStartFailed' };
+  }
+
+  const interval = Math.max(5, Number(device.interval) || 5);
+  const expiresIn = Number(device.expires_in) || 1800;
+  const uri = device.verification_uri || 'https://www.twitch.tv/activate';
+
+  twitchAuthSession = {
+    active: true,
+    clientId: values.clientId,
+    clientSecret: values.clientSecret,
+    deviceCode: device.device_code,
+    userCode: device.user_code,
+    verificationUri: uri,
+    interval: interval,
+    deadline: Date.now() + expiresIn * 1000,
+    error: '',
+    timer: null
+  };
+
+  shell.openExternal(uri).catch(function (error) {
+    log('twitch open browser failed', error.message);
+  });
+  scheduleTwitchPoll(interval * 1000);
+  log('twitch device flow started');
+
+  return Object.assign({ ok: true }, twitchAuthState());
+}
+
+function twitchAuthLogout() {
+  twitchTokenStore().clearTwitch();
+  if (twitchAuthSession && twitchAuthSession.timer) clearTimeout(twitchAuthSession.timer);
+  twitchAuthSession = null;
+  log('twitch token removed');
+  if (bot.state === 'running' || bot.state === 'starting') {
+    restartBot().catch(function (error) { log('bot restart after twitch logout failed', error.message); });
+  }
+  return Object.assign({ ok: true }, twitchAuthState());
+}
+
 async function saveSettingsFromWindow(raw) {
   const before = loadSettings().settings;
   const settings = writeSettings(raw);
@@ -1737,33 +2028,46 @@ function registerHotkey(accelerator, handler) {
   }
 }
 
+const BOT_STATE_KEYS = {
+  stopped: 'botStateStopped',
+  starting: 'botStateStarting',
+  running: 'botStateRunning',
+  external: 'botStateExternal',
+  stopping: 'botStateStopping',
+  error: 'botStateError'
+};
+
 function buildTrayMenu() {
+  const dict = getLocale(uiLanguage());
+  const text = function (key) { return dict[key] != null ? dict[key] : key; };
   const status = botStatus();
   const botChannel = status.channel ? ' · #' + status.channel : '';
+  const stateKey = BOT_STATE_KEYS[status.state];
+  const stateLabel = stateKey ? text(stateKey) : (status.label || status.state);
   return Menu.buildFromTemplate([
-    { label: 'Бот: ' + status.label + botChannel, enabled: false },
-    { label: 'Панель бота…  (Ctrl+Alt+B)', click: openBotPanel },
+    { label: text('trayBotStatus') + stateLabel + botChannel, enabled: false },
+    { label: text('trayBotPanel'), click: openBotPanel },
     {
-      label: status.canStop ? 'Остановить бота' : 'Запустить бота',
+      label: status.canStop ? text('trayStopBot') : text('trayStartBot'),
       enabled: status.canStop || status.canStart,
       click: function () { toggleBot(); }
     },
     {
-      label: 'Перезапустить бота',
+      label: text('trayRestartBot'),
       enabled: status.canRestart,
       click: function () { restartBot(); }
     },
-    { label: 'Папка бота', click: openBotFolder },
+    { label: text('trayBotFolder'), click: openBotFolder },
     { type: 'separator' },
-    { label: 'Настройки…  (Ctrl+Alt+S)', click: openSettingsWindow },
+    { label: text('traySettings'), click: openSettingsWindow },
     { type: 'separator' },
-    { label: 'Показать / скрыть чат  (Ctrl+Alt+C)', click: toggleVisible },
-    { label: editMode ? 'Выйти из режима перемещения' : 'Режим перемещения  (Ctrl+Alt+E)', click: function () { setEditMode(!editMode); } },
-    { label: 'Обновить чат  (Ctrl+Alt+R)', click: reloadChat },
-    { type: 'checkbox', checked: state.protected !== false, label: 'Невидим для OBS / захвата  (Ctrl+Alt+P)', click: function (item) { applyContentProtection(item.checked); saveStateSoon(); } },
-    { label: 'Сбросить позицию', click: resetPosition },
+    { label: text('trayShowHide'), click: toggleVisible },
+    { label: editMode ? text('trayExitEditMode') : text('trayEditMode'), click: function () { setEditMode(!editMode); } },
+    { label: text('trayReload'), click: reloadChat },
+    { type: 'checkbox', checked: state.protected !== false, label: text('trayProtection'), click: function (item) { applyContentProtection(item.checked); saveStateSoon(); } },
+    { label: text('trayResetPosition'), click: resetPosition },
     { type: 'separator' },
-    { label: 'Выход  (Ctrl+Alt+Q)', click: quit }
+    { label: text('trayQuit'), click: quit }
   ]);
 }
 
@@ -1779,7 +2083,7 @@ function showStartHint(text, options) {
   if (!win || win.isDestroyed()) return;
   if (FLAGS.demo || FLAGS.silent) return;
   const opts = options || {};
-  const message = text || 'Stream Helper запущен · жду сообщения из чата';
+  const message = text || uiText('startHint');
   const ttl = opts.ttl > 0 ? opts.ttl : 15000;
   const force = opts.force === true;
   const js = [
@@ -1851,7 +2155,7 @@ function createTray() {
       return;
     }
     tray = new Tray(image.resize({ width: 16, height: 16 }));
-    tray.setToolTip('Stream Helper — чат и бот');
+    tray.setToolTip(uiText('trayTooltip'));
     updateTrayMenu();
     tray.on('click', toggleVisible);
     log('tray ready', file);
@@ -1863,7 +2167,7 @@ function createTray() {
   // Один раз за запуск говорим, что приложение реально стартовало:
   // окно оверлея прозрачное и без сообщений его легко не заметить.
   if (FLAGS.silent) return;
-  const text = 'Чат и бот запущены. Иконка в трее: правый клик — меню, Ctrl+Alt+C — скрыть/показать окно.';
+  const text = uiText('trayBalloon');
   setTimeout(function () {
     if (!tray) return;
     try {
@@ -1905,8 +2209,8 @@ if (!gotLock) {
       // запуск подтверждаем подсказкой поверх чата.
       showStartHint(
         wasVisible
-          ? 'Stream Helper уже запущен · окно чата на экране'
-          : 'Stream Helper уже запущен · окно чата снова на экране',
+          ? uiText('startHintVisible')
+          : uiText('startHintAgain'),
         { force: true, ttl: 4000 }
       );
       log('second-instance raised window');
@@ -1949,6 +2253,24 @@ if (!gotLock) {
     });
     ipcMain.handle('alerts:test', function (event, raw) {
       return testAlerts(raw);
+    });
+    ipcMain.handle('twitchAuth:start', function (event, raw) {
+      return twitchAuthStart(raw);
+    });
+    ipcMain.handle('twitchAuth:save', function (event, raw) {
+      return twitchAuthSave(raw);
+    });
+    ipcMain.handle('twitchAuth:logout', function () {
+      return twitchAuthLogout();
+    });
+    ipcMain.handle('twitchAuth:status', function () {
+      return twitchAuthState();
+    });
+    ipcMain.handle('settings:set-language', function (event, lang) {
+      return setLanguage(lang);
+    });
+    ipcMain.handle('settings:get-language', function () {
+      return currentLanguage();
     });
     ipcMain.handle('overlay:get-url', function () {
       const file = overlayPath();

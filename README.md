@@ -1,54 +1,58 @@
 # Stream Helper
 
-**Чат поверх игры + оверлей для OBS + чат-бот для Twitch в одном приложении.**
+**In-game chat + OBS overlay + Twitch chat bot in one application.**
 
-Stream Helper показывает сообщения из чата прямо поверх игры, выводит тот же
-чат в OBS и запускает встроенного бота: команды, модерация, баллы, розыгрыши,
-викторина и уведомления о стриме в Telegram.
+Stream Helper shows chat messages right on top of your game, outputs the same
+chat to OBS, and runs a built-in bot: commands, moderation, points, giveaways,
+quiz, and Telegram stream notifications.
 
-Приложение работает на Windows, не требует отдельного сервера и не
-перехватывает клики. Окно чата исключено из захвата экрана — зрители видят
-только чистый оверлей из OBS.
-
----
-
-## Возможности
-
-- **Чат поверх игры** — прозрачное окно, перетаскивание, горячие клавиши,
-  защита от захвата в OBS/Discord.
-- **Оверлей для OBS** — обычный HTML-файл: Twitch, YouTube и Kick в одном
-  источнике, плашки платформ, смайлы, автоскролл.
-- **Twitch-бот** — команды, свои ответы, автосообщения, модерация (спам,
-  ссылки, капс, мут и бан), баллы, розыгрыши, викторина, благодарности за
-  подписки, рейды и битсы.
-- **Панель бота** — статус, живая лента, редактор команд, ссылок, модерации и
-  развлечений прямо в браузере на `http://127.0.0.1:39001`.
-- **Telegram-уведомления** — сообщение о начале стрима с превью и кнопками и
-  справка об итогах после эфира.
-- **Синхронизация настроек** — канал и ссылки из окна настроек автоматически
-  попадают в конфиг бота и в уведомления.
+The app runs on Windows, needs no separate server, and never captures clicks.
+The chat window is excluded from screen capture, so viewers only see the clean
+OBS overlay.
 
 ---
 
-## Установка (Windows)
+## Features
 
-1. Скачайте установщик `Stream-Helper-Setup-*.exe` из раздела
+- **In-game chat** — transparent window, drag mode, hotkeys, and capture
+  protection for OBS/Discord.
+- **OBS overlay** — a plain HTML file: Twitch, YouTube, and Kick in one source,
+  platform badges, emotes, auto-scroll.
+- **Twitch bot** — commands, custom replies, timers, moderation (spam, links,
+  caps, timeout, and ban), points, giveaways, quiz, subscription/raid/bits
+  thanks.
+- **Bot panel** — status, live feed, and editors for commands, links,
+  moderation, and games in your browser at `http://127.0.0.1:39001`.
+- **Twitch authorization in the app** — connect the bot with the device-code
+  flow from the **Twitch** settings tab. No file editing required.
+- **Telegram notifications** — a stream-start message with preview and buttons,
+  plus a summary after the stream.
+- **Settings sync** — the channel and links from the settings window are copied
+  into the bot config and notifications automatically.
+- **Russian and English UI** — switch languages in the **Language** tab; the
+  choice is saved immediately.
+
+---
+
+## Installation (Windows)
+
+1. Download the `Stream-Helper-Setup-*.exe` installer from
    [Releases](../../releases).
-2. Запустите его. Установка идёт в профиль пользователя, права администратора
-   не нужны.
-3. Запустите **Stream Helper** с рабочего стола.
+2. Run it. It installs into your user profile, so administrator rights are not
+   required.
+3. Launch **Stream Helper** from the desktop.
 
-Приложение не подписано цифровой подписью, поэтому Windows может показать
-синее окно «Windows защитила ваш компьютер»: **Подробнее → Всё равно
-выполнить**.
+The application is not code-signed, so Windows may show the blue
+"Windows protected your PC" dialog: **More info → Run anyway**.
 
-Установщик не содержит токенов и каналов — всё настраивается под себя.
+The installer contains no tokens or channels — everything is configured for
+your setup.
 
 ---
 
-## Запуск из исходников
+## Running from source
 
-Нужны **Node.js 20+** и Windows 10/11.
+You need **Node.js 20+** and Windows 10/11.
 
 ```bat
 git clone https://github.com/ENEMY-1/stream-helper.git
@@ -57,153 +61,157 @@ npm install
 npm start
 ```
 
-Тесты бота:
+Bot tests:
 
 ```bat
 npm test
 ```
 
-Сборка установщика:
+Build the installer:
 
 ```bat
 npm run dist
 ```
 
-Файл появится в `release/`.
+The file appears in `release/`.
 
 ---
 
-## Первая настройка
+## First setup
 
-### 1. Каналы
+### 1. Channels
 
-Откройте настройки: значок в трее → **«Настройки…»** или `Ctrl + Alt + S`.
+Open settings: tray icon → **Settings…** or `Ctrl + Alt + S`.
 
-На вкладке **«Аккаунты и каналы»** укажите:
+On the **Accounts & Channels** tab, set:
 
-- **Twitch** — имя канала без `@` и `#`;
-- **YouTube** — ID канала (`UC…`) или `@ник`; ключ YouTube Data API нужен
-  только для режима «только API» (по умолчанию чат читается без ключа);
-- **Kick** — при необходимости.
+- **Twitch** — channel name without `@` or `#`;
+- **YouTube** — channel ID (`UC…`) or `@handle`; the YouTube Data API key is
+  only needed for the "API only" mode (chat is read without a key by default);
+- **Kick** — if needed.
 
-Канал и ссылки применяются к окну чата, OBS и боту. Бот перезапускается сам.
+The channel and links apply to the chat window, OBS, and the bot. The bot
+restarts automatically.
 
-### 2. Twitch-бот
+### 2. Twitch bot
 
-1. Откройте <https://dev.twitch.tv/console/apps> → **Register Your
-   Application**.
-2. **Name** — любое, **OAuth Redirect URLs** — `http://localhost:3000`,
+1. Open <https://dev.twitch.tv/console/apps> → **Register Your Application**.
+2. **Name** — anything, **OAuth Redirect URLs** — `http://localhost:3000`,
    **Category** — `Chat Bot`, **Client Type** — **Public**.
-3. Скопируйте **Client ID** и впишите в `chat-desktop/bot/config.js`:
+3. Open **Settings → Twitch** in Stream Helper.
+4. Paste the **Client ID** and click **Log in to Twitch**.
+5. Enter the code shown in the app on the Twitch activation page and confirm
+   access. The token is saved automatically.
 
-   ```js
-   twitch: {
-     channel: 'ваш_канал',
-     clientId: 'ваш_client_id',
-     clientSecret: '',
-     botUsername: ''
-   }
-   ```
+The token is stored in `chat-desktop/bot/data/tokens.json` and refreshed
+automatically. The `data/` folder is excluded from git.
 
-4. Запустите `chat-desktop\bot\auth-twitch.bat` и войдите аккаунтом бота.
-5. Проверьте `chat-desktop\bot\check-config.bat`.
+The same values can still be edited manually in `chat-desktop/bot/config.js`:
 
-Токен сохранится в `chat-desktop/bot/data/tokens.json` и обновляется сам.
-Папка `data/` исключена из git.
+```js
+twitch: {
+  channel: 'your_channel',
+  clientId: 'your_client_id',
+  clientSecret: '',
+  botUsername: ''
+}
+```
 
-### 3. Telegram-уведомления (необязательно)
+### 3. Telegram notifications (optional)
 
-1. Создайте бота у [@BotFather](https://t.me/BotFather) командой `/newbot`
-   и скопируйте токен.
-2. Добавьте бота **администратором** в свой Telegram-канал (достаточно права
-   публиковать сообщения).
-3. Откройте настройки приложения (`Ctrl + Alt + S`) → вкладка
-   **«Уведомления»**.
-4. Вставьте токен и канал (`@имя_канала` или числовой ID `-100…`).
-5. Нажмите **«Отправить тестовое сообщение»** — оно придёт в канал.
-6. Включите **«Отправлять уведомления в Telegram»** и нажмите
-   **«Сохранить»**. Бот перезапустится сам.
+1. Create a bot with [@BotFather](https://t.me/BotFather) using `/newbot` and
+   copy the token.
+2. Add the bot as an **administrator** of your Telegram channel (posting
+   permission is enough).
+3. Open the app settings (`Ctrl + Alt + S`) → **Notifications** tab.
+4. Paste the token and channel (`@channel_name` or numeric ID `-100…`).
+5. Click **Send test message** — it should arrive in the channel.
+6. Enable **Send notifications to Telegram** and click **Save**. The bot
+   restarts automatically.
 
-Те же значения можно вписать вручную в `chat-desktop/bot/config.js`:
+The same values can be written manually in `chat-desktop/bot/config.js`:
 
 ```js
 streamAlerts: {
   enabled: true,
   telegram: {
     botToken: '123456789:AA...',
-    chatId: '@имя_канала',
+    chatId: '@channel_name',
     messageThreadId: ''
   }
 }
 ```
 
-Токен можно не хранить в файле, а задать переменными окружения
-`TELEGRAM_BOT_TOKEN` и `TELEGRAM_CHAT_ID` — они важнее значений из `config.js`.
+Instead of storing the token in a file, you can set the
+`TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` environment variables — they take
+priority over `config.js`.
 
 ---
 
 ## OBS
 
-1. **Источники → + → Браузер** (или «Локальный файл»).
-2. Выберите `chat-overlay/overlay.html` из папки установки или проекта.
-3. Размер источника — около **520 × 880**.
-4. Включите **«Обновлять браузер, когда сцена становится активной»**.
+1. **Sources → + → Browser** (or "Local file").
+2. Select `chat-overlay/overlay.html` from the installation or project folder.
+3. Source size — about **520 × 880**.
+4. Enable **Refresh browser when scene becomes active**.
 
-Подробности — в [`chat-overlay/README.md`](chat-overlay/README.md).
+Details are in [`chat-overlay/README.md`](chat-overlay/README.md).
 
 ---
 
-## Где что лежит
+## Where things are stored
 
-| Что | Где |
+| What | Where |
 |---|---|
-| Настройки каналов и вида | `chat-overlay/overlay-settings.js` (создаётся при сохранении) |
-| Настройки по умолчанию | `chat-overlay/config.js` |
-| Команды, модерация, уведомления | `chat-desktop/bot/config.js` |
-| Токены Twitch | `chat-desktop/bot/data/tokens.json` |
-| Баллы и состояние розыгрышей | `chat-desktop/bot/data/state.json` |
-| Журналы | `chat-desktop/app.log`, `chat-desktop/bot/data/bot.log` |
+| Channel and appearance settings | `chat-overlay/overlay-settings.js` (created on save) |
+| Default settings | `chat-overlay/config.js` |
+| Commands, moderation, notifications | `chat-desktop/bot/config.js` |
+| Twitch tokens | `chat-desktop/bot/data/tokens.json` |
+| Points and giveaway state | `chat-desktop/bot/data/state.json` |
+| Logs | `chat-desktop/app.log`, `chat-desktop/bot/data/bot.log` |
 
-При установке через установщик папка приложения находится в
+When installed with the installer, the application folder is
 `%LOCALAPPDATA%\Programs\Stream Helper`.
 
 ---
 
-## Горячие клавиши
+## Hotkeys
 
-| Клавиши | Действие |
+| Keys | Action |
 |---|---|
-| `Ctrl + Alt + S` | Настройки |
-| `Ctrl + Alt + B` | Панель бота |
-| `Ctrl + Alt + C` | Показать / скрыть чат |
-| `Ctrl + Alt + E` | Режим перемещения окна |
-| `Ctrl + Alt + R` | Перезагрузить чат |
-| `Ctrl + Alt + P` | Спрятать / показать окно в захвате |
-| `Ctrl + Alt + Q` | Выход |
+| `Ctrl + Alt + S` | Settings |
+| `Ctrl + Alt + B` | Bot panel |
+| `Ctrl + Alt + C` | Show / hide chat |
+| `Ctrl + Alt + E` | Window drag mode |
+| `Ctrl + Alt + R` | Reload chat |
+| `Ctrl + Alt + P` | Hide / show the window in captures |
+| `Ctrl + Alt + Q` | Quit |
 
 ---
 
-## Документация
+## Documentation
 
-- [`chat-desktop/README.md`](chat-desktop/README.md) — приложение, настройки,
-  горячие клавиши, устранение неполадок.
-- [`chat-desktop/bot/README.md`](chat-desktop/bot/README.md) — все команды,
-  параметры бота и уведомлений.
-- [`chat-overlay/README.md`](chat-overlay/README.md) — оверлей, параметры
-  адреса и подключение к OBS.
+- [`chat-desktop/README.md`](chat-desktop/README.md) — application, settings,
+  hotkeys, troubleshooting.
+- [`chat-desktop/bot/README.md`](chat-desktop/bot/README.md) — all commands,
+  bot and notification options.
+- [`chat-overlay/README.md`](chat-overlay/README.md) — overlay, URL parameters,
+  and OBS setup.
+
+Russian versions are available as `README.ru.md` in the same folders.
 
 ---
 
-## Автор
+## Author
 
 - Twitch: <https://twitch.tv/uisquad>
 - YouTube: <https://youtube.com/@UISquat>
 - Telegram: <https://t.me/iseype>
 
-Если проект помог — поставьте звезду репозиторию.
+If this project helped, give the repository a star.
 
 ---
 
-## Лицензия
+## License
 
 [MIT](LICENSE)

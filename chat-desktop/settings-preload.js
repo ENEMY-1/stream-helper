@@ -4,6 +4,13 @@
 // Сохранение пишет общий файл overlay-settings.js рядом с overlay.html.
 
 const { contextBridge, ipcRenderer } = require('electron');
+const { LOCALES, getBrowserLang } = require('./i18n');
+
+// Словари для перевода интерфейса на стороне окна настроек.
+contextBridge.exposeInMainWorld('i18n', {
+  locales: LOCALES,
+  browserLang: getBrowserLang()
+});
 
 contextBridge.exposeInMainWorld('settingsApi', {
   load: function () {
@@ -53,5 +60,23 @@ contextBridge.exposeInMainWorld('settingsApi', {
   },
   overlayOpenFolder: function () {
     ipcRenderer.send('overlay:open-folder');
+  },
+  twitchAuthStart: function (values) {
+    return ipcRenderer.invoke('twitchAuth:start', values);
+  },
+  twitchAuthSave: function (values) {
+    return ipcRenderer.invoke('twitchAuth:save', values);
+  },
+  twitchAuthLogout: function () {
+    return ipcRenderer.invoke('twitchAuth:logout');
+  },
+  twitchAuthStatus: function () {
+    return ipcRenderer.invoke('twitchAuth:status');
+  },
+  setLanguage: function (lang) {
+    return ipcRenderer.invoke('settings:set-language', lang);
+  },
+  getLanguage: function () {
+    return ipcRenderer.invoke('settings:get-language');
   }
 });

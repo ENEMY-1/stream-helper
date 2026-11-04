@@ -1,194 +1,204 @@
-# Stream Helper — чат и бот
+# Stream Helper — chat and bot
 
-Одно приложение для стрима: прозрачный чат поверх игры, оверлей для OBS и
-чат-бот в одном процессе. Один значок в трее, один набор настроек.
+One app for streaming: a transparent in-game chat, an OBS overlay, and a chat
+bot in a single process. One tray icon, one settings panel.
 
-- `chat-desktop/` — окно чата, настройки, значок в трее и встроенный бот.
-- `../chat-overlay/` — HTML-оверлей, который добавляется в OBS.
+- `chat-desktop/` — chat window, settings, tray icon, and the built-in bot.
+- `../chat-overlay/` — the HTML overlay added to OBS.
 
-Оба окна читают одни и те же настройки каналов и внешнего вида.
+Both windows read the same channel and appearance settings.
 
 ---
 
-## 1. Запуск из исходников
+## 1. Running from source
 
-Нужны Windows 10/11 и **Node.js 20+**.
+You need Windows 10/11 and **Node.js 20+**.
 
 ```bat
 npm install
 npm start
 ```
 
-`npm start` запускает Electron из корня проекта. Тесты бота:
+`npm start` launches Electron from the project root. Bot tests:
 
 ```bat
 npm test
 ```
 
-Сборка установщика Windows:
+Build the Windows installer:
 
 ```bat
 npm run dist
 ```
 
-Готовый установщик появится в папке `release/`.
+The ready installer appears in the `release/` folder.
 
-Можно запускать и через `chat-desktop\start.bat` — он подхватывает Electron
-из `node_modules`. Флаги: `--demo` (демо-чат), `--bot-demo` (фейковый чат для
-бота), `--no-bot` (без бота), `--settings` (сразу открыть настройки).
-
----
-
-## 2. Что делает приложение
-
-1. Показывает прозрачное окно чата поверх игры.
-2. Поднимает локальный ретранслятор YouTube на `127.0.0.1:38999`, чтобы OBS и
-   окно поверх игры не тратили квоту YouTube API дважды.
-3. Запускает встроенного бота скрыто, без отдельной консоли.
-4. Кладёт значок в трей.
-
-При запуске в левом нижнем углу на 15 секунд появляется подсказка
-**«Stream Helper запущен · жду сообщения из чата»**, а в трее — уведомление.
-Если запустить приложение второй раз, окно поднимется, а не откроется новое.
-
-Бот стартует вместе с приложением, если включён пункт
-**«Запускать бота вместе с приложением»** (вкладка **«Бот»**). При выходе
-бот останавливается и успевает сохранить состояние.
+You can also run `chat-desktop\start.bat` — it uses Electron from
+`node_modules`. Flags: `--demo` (demo chat), `--bot-demo` (fake chat for the
+bot), `--no-bot` (without the bot), `--settings` (open settings immediately).
 
 ---
 
-## 3. Настройки
+## 2. What the app does
 
-**Трей → «Настройки…»** или `Ctrl + Alt + S`.
+1. Shows a transparent chat window on top of the game.
+2. Starts a local YouTube relay on `127.0.0.1:38999` so OBS and the in-game
+   window do not spend the YouTube API quota twice.
+3. Starts the built-in bot hidden, without a separate console.
+4. Adds a tray icon.
 
-- **Аккаунты и каналы** — Twitch, Kick, YouTube, ключ YouTube API.
-  Канал меняется один раз и применяется к окну чата, OBS и боту.
-- **Внешний вид** — тема, шрифт, число сообщений, прозрачность, плашки
-  платформ, направление новых сообщений.
-- **Поведение** — демо-режим, технический статус, синхронизация с ботом.
-- **Бот** — состояние, запуск/остановка/перезапуск, автозапуск и путь к
+On startup, a hint **"Stream Helper is running · waiting for chat messages"**
+appears in the bottom-left corner for 15 seconds, and the tray shows a
+notification. If you launch the app a second time, the existing window is
+raised instead of opening a new one.
+
+The bot starts with the app when **"Start bot with the application"** is
+enabled (the **Bot** tab). On exit, the bot stops and has time to save its
+state.
+
+---
+
+## 3. Settings
+
+**Tray → "Settings…"** or `Ctrl + Alt + S`.
+
+- **Accounts & Channels** — Twitch, Kick, YouTube, YouTube API key. Change the
+  channel once and it applies to the chat window, OBS, and the bot.
+- **Appearance** — theme, font, message count, opacity, platform badges, and
+  new-message direction.
+- **Behavior** — demo mode, technical status, and bot sync.
+- **Bot** — state, start/stop/restart, autostart, and the path to
   `bot/config.js`.
-- **Уведомления** — токен Telegram-бота, канал или чат, тема, уведомления о
-  начале стрима и итоги после эфира. Здесь же есть тестовое сообщение.
+- **Notifications** — Telegram bot token, channel or chat, thread, stream-start
+  notifications, and the post-stream summary. There is also a test message
+  button here.
+- **Twitch** — Twitch application Client ID and bot authorization via the
+  device-code flow. No file editing required.
+- **Language** — Auto (system), Russian, or English. The change is saved
+  immediately, without pressing Save.
 
-Сохранение пишет `chat-overlay/overlay-settings.js` — его читают и OBS, и
-окно поверх игры. Настройки Telegram сохраняются отдельно, прямо в
-`bot/config.js`: их читает бот. В окне изменения видны сразу, в OBS нужно
-обновить источник (правый клик → **«Обновить»**).
+Saving writes `chat-overlay/overlay-settings.js`, which is read by both OBS and
+the in-game window. Telegram settings are saved separately, directly into
+`bot/config.js`, because the bot reads them. Changes are visible in the window
+immediately; in OBS, refresh the source (right-click → **Refresh**).
 
-Если канал или ссылка изменились, приложение само перезапускает бота. Одна и
-та же YouTube-ссылка попадает в `!social` и в уведомления о начале и конце
-стрима.
+If the channel or a link changes, the app restarts the bot automatically. The
+same YouTube link goes into `!social` and into the stream-start/end
+notifications.
 
 ---
 
-## 4. Горячие клавиши
+## 4. Hotkeys
 
-| Клавиши | Действие |
+| Keys | Action |
 |---|---|
-| `Ctrl + Alt + S` | Настройки |
-| `Ctrl + Alt + B` | Панель бота |
-| `Ctrl + Alt + C` | Показать / скрыть чат |
-| `Ctrl + Alt + E` | Режим перемещения окна чата |
-| `Ctrl + Alt + R` | Перезагрузить чат |
-| `Ctrl + Alt + P` | Спрятать / показать окно в захвате |
-| `Ctrl + Alt + ]` | Увеличить окно |
-| `Ctrl + Alt + [` | Уменьшить окно |
-| `Ctrl + Alt + Q` | Выход (бот тоже остановится) |
+| `Ctrl + Alt + S` | Settings |
+| `Ctrl + Alt + B` | Bot panel |
+| `Ctrl + Alt + C` | Show / hide chat |
+| `Ctrl + Alt + E` | Chat window drag mode |
+| `Ctrl + Alt + R` | Reload chat |
+| `Ctrl + Alt + P` | Hide / show the window in captures |
+| `Ctrl + Alt + ]` | Enlarge the window |
+| `Ctrl + Alt + [` | Shrink the window |
+| `Ctrl + Alt + Q` | Quit (the bot stops too) |
 
-Позиция и размер окна запоминаются в `position.json`. Если окно «уехало» —
-в трее есть **«Сбросить позицию»**.
+Window position and size are stored in `position.json`. If the window moves
+off-screen, use **"Reset position"** in the tray.
 
 ---
 
-## 5. Бот
+## 5. Bot
 
-Бот живёт в `bot/` и запускается приложением. Подробная инструкция —
+The bot lives in `bot/` and is started by the app. Full instructions are in
 [`bot/README.md`](bot/README.md).
 
-Коротко:
+In short:
 
-- команды `!help`, `!social`, `!uptime`, `!ping`, `!game`, `!points`, `!top`,
-  `!daily`, `!give`, `!join`, `!quiz`, `!ga` и свои команды;
-- автосообщения по таймеру, пока в чате есть жизнь;
-- модерация: спам, запрещённые слова, ссылки, капс, мут и бан;
-- баллы, розыгрыши, викторина, благодарности за подписки/рейды/битсы;
-- уведомления в Telegram о начале стрима и справка об итогах;
-- панель управления на `http://127.0.0.1:39001`.
+- commands `!help`, `!social`, `!uptime`, `!ping`, `!game`, `!points`, `!top`,
+  `!daily`, `!give`, `!join`, `!quiz`, `!ga`, and custom commands;
+- timed messages while chat is active;
+- moderation: spam, banned words, links, caps, timeout, and ban;
+- points, giveaways, quiz, subscription/raid/bits thanks;
+- Telegram stream-start notifications and a post-stream summary;
+- control panel at `http://127.0.0.1:39001`.
 
-Всё настраивается в панели бота. Параметры хранятся в `bot/config.js`, токены
-— в `bot/data/` (эта папка не попадает в git).
+Everything is configured in the bot panel. Settings live in `bot/config.js`;
+tokens live in `bot/data/` (this folder is not committed to git).
 
-Первый вход в Twitch:
+First Twitch login:
 
-1. Создай приложение на <https://dev.twitch.tv/console/apps> (Client Type —
-   **Public**) и впиши **Client ID** в `bot/config.js`.
-2. Запусти `bot\auth-twitch.bat` и войди аккаунтом бота.
-3. Проверь настройки: `bot\check-config.bat`.
-4. Открой панель бота (`Ctrl + Alt + B`) — статус должен быть
-   **«Бот на связи»**.
+1. Create an application at <https://dev.twitch.tv/console/apps> (Client Type —
+   **Public**).
+2. In the app, open **Settings → Twitch**, paste the **Client ID**, and click
+   **Log in to Twitch**.
+3. Enter the code on the Twitch activation page and confirm access.
+4. Open the bot panel (`Ctrl + Alt + B`) — the status should be **"Bot
+   connected"**.
+
+The token is saved to `bot/data/tokens.json` automatically.
 
 ---
 
 ## 6. OBS
 
-Добавь **Источники → + → Браузер** (или «Локальный файл») и выбери
-`chat-overlay/overlay.html`. Размер источника — примерно **520 × 880**.
-Включи **«Обновлять браузер, когда сцена становится активной»**.
+Add **Sources → + → Browser** (or "Local file") and select
+`chat-overlay/overlay.html`. Source size — about **520 × 880**.
+Enable **Refresh browser when scene becomes active**.
 
-Подробности и параметры адреса — в
+Details and URL parameters are in
 [`../chat-overlay/README.md`](../chat-overlay/README.md).
 
 ---
 
-## 7. Если что-то не работает
+## 7. Troubleshooting
 
-| Симптом | Что делать |
+| Symptom | What to do |
 |---|---|
-| Бот «Остановлен» | Вкладка «Бот» → «Запустить». Проверь `bot/data/bot.log` |
-| Бот «Ошибка» | Прочитай текст на вкладке; чаще всего это `bot/config.js` или занятый порт 39001 |
-| Панель бота пустая | Подожди пару секунд и нажми «Повторить»; проверь `bot/data/bot.log` |
-| Twitch-бот молчит | `bot/auth-twitch.bat`; для мутов и банов бот должен быть модератором канала |
-| YouTube молчит | Проверь канал в настройках; в `app.log` должно быть `youtube web: чат подключён` |
-| В OBS старые настройки | Правый клик по источнику → «Обновить» |
-| Окно чата не видно | Трей → «Показать / скрыть чат» (`Ctrl+Alt+C`), проверь режим игры |
-| Порт 39001 занят | Закрой старый бот или поменяй `statusPort` в `bot/config.js` |
-| Настройки не сохраняются | Проверь права на папку `chat-overlay`; файл `overlay-settings.js` должен быть доступен на запись |
+| Bot says "Stopped" | Bot tab → **Start**. Check `bot/data/bot.log` |
+| Bot says "Error" | Read the text on the tab; usually it is `bot/config.js` or port 39001 is busy |
+| Bot panel is empty | Wait a couple of seconds and click **Retry**; check `bot/data/bot.log` |
+| Twitch bot is silent | Open Settings → Twitch and log in again; for timeouts and bans the bot must be a channel moderator |
+| YouTube is silent | Check the channel in settings; `app.log` should contain `youtube web: chat connected` |
+| OBS shows old settings | Right-click the source → **Refresh** |
+| Chat window is not visible | Tray → **Show / hide chat** (`Ctrl+Alt+C`), check game mode |
+| Port 39001 is busy | Close the old bot or change `statusPort` in `bot/config.js` |
+| Settings are not saved | Check write permissions on the `chat-overlay` folder; `overlay-settings.js` must be writable |
 
 ---
 
-## 8. Структура
+## 8. Structure
 
 ```
 chat-desktop/
-├── start.bat              запуск через Electron из node_modules
-├── main.js                окно чата, трей, горячие клавиши, запуск бота
-├── settings.html          окно настроек
-├── bot-panel.html         заставка панели бота
+├── start.bat              launch through Electron from node_modules
+├── main.js                chat window, tray, hotkeys, bot startup
+├── settings.html          settings window
+├── i18n.js                Russian and English dictionaries
+├── bot-panel.html         bot panel splash screen
 ├── bot-panel-preload.js
 ├── settings-preload.js
-├── preload.js             перетаскивание окна
-├── yt-live.js             чтение чата YouTube без Data API
-├── bot-sync.js            синхронизация каналов в bot/config.js
-├── icon.ico / icon.png    значки окна, трея и ярлыков
-└── bot/                   встроенный чат-бот
-    ├── config.js          команды, таймеры, модерация, баллы, розыгрыши
-    ├── src/               код бота
-    ├── data/              токены, состояние, журнал (не в git)
-    ├── test/              тесты (node --test)
-    ├── auth-twitch.bat    вход в Twitch
-    ├── check-config.bat   проверка настроек и токенов
-    └── open-panel.bat     открыть панель бота
+├── preload.js             window dragging
+├── yt-live.js             YouTube chat reader without Data API
+├── bot-sync.js            channel sync into bot/config.js
+├── icon.ico / icon.png    window, tray, and shortcut icons
+└── bot/                   built-in chat bot
+    ├── config.js          commands, timers, moderation, points, giveaways
+    ├── src/               bot code
+    ├── data/              tokens, state, log (not in git)
+    ├── test/              tests (node --test)
+    ├── auth-twitch.bat    Twitch login (legacy helper)
+    ├── check-config.bat   config and token check
+    └── open-panel.bat     open the bot panel
 ```
 
 ---
 
-## 9. Важно про игры
+## 9. Important notes about games
 
-- Оверлей виден в **оконном / безрамочном** режиме. В эксклюзивном
-  fullscreen Windows не даёт окну рисоваться поверх игры — переключи игру на
-  «Borderless Windowed».
-- Клики и фокус не перехватываются.
-- Окно исключено из захвата (`WDA_EXCLUDEFROMCAPTURE`): в OBS, Discord и
-  записи экрана его не видно.
-- `Ctrl + Alt + P` — если окно когда-нибудь понадобится показать в захвате.
+- The overlay is visible in **windowed / borderless** mode. In exclusive
+  fullscreen, Windows does not let the window draw on top of the game — switch
+  the game to "Borderless Windowed".
+- Clicks and focus are not captured.
+- The window is excluded from capture (`WDA_EXCLUDEFROMCAPTURE`): it is not
+  visible in OBS, Discord, or screen recordings.
+- `Ctrl + Alt + P` — if you ever need to show the window in a capture.

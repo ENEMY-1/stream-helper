@@ -1,39 +1,38 @@
-# Мультичат-оверлей для OBS
+# Multi-chat overlay for OBS
 
-Один HTML-файл, который выводит чат **Twitch + YouTube + Kick** в OBS как
-Browser Source: прозрачный фон, плашки с ником и цветом пользователя, смайлы,
-автоскролл, поддержка нескольких каналов одновременно.
+A single HTML file that outputs **Twitch + YouTube + Kick** chat in OBS as a
+Browser Source: transparent background, nick and user-color badges, emotes,
+auto-scroll, and support for multiple channels at once.
 
 ```
 chat-overlay/
-├── overlay.html          <- сам оверлей (это и добавляем в OBS)
-├── config.js             <- настройки по умолчанию (каналы, размер, вид)
-├── overlay-settings.js   <- настройки из окна «Настройки» (главнее config.js)
-└── README.md             <- эта инструкция
+├── overlay.html          <- the overlay itself (add this to OBS)
+├── config.js             <- default settings (channels, size, look)
+├── overlay-settings.js   <- settings from the app window (overrides config.js)
+└── README.md             <- this guide
 ```
 
 ---
 
-## 0. Что показывает оверлей
+## 0. What the overlay shows
 
-Один HTML-файл выводит сообщения Twitch, YouTube и Kick: ник, цвет
-пользователя, смайлы, плашки платформ и автоскролл. Сервер не нужен.
+One HTML file outputs Twitch, YouTube, and Kick messages: nick, user color,
+emotes, platform badges, and auto-scroll. No server required.
 
-Каналы задаются в `config.js` или в окне «Настройки» приложения — оно
-сохраняет их в `overlay-settings.js`, и этот файл главнее `config.js`.
-По умолчанию список каналов пустой.
+Channels are set in `config.js` or in the app's settings window — it saves them
+to `overlay-settings.js`, which overrides `config.js`. The channel list is
+empty by default.
 
-YouTube-сообщения умеют ходить через приложение для игры (`chat-desktop`):
-оно читает чат YouTube **без Data API** (дневная квота не тратится) и
-раздаёт сообщения OBS по адресу `http://127.0.0.1:38999` — оба окна
-показывают их через 1–2 секунды.
-Если приложение не запущено, OBS опрашивает API сам (медленнее, с квотой).
+YouTube messages can go through the desktop app (`chat-desktop`): it reads
+YouTube chat **without the Data API** (no daily quota spent) and relays messages
+to OBS at `http://127.0.0.1:38999` — both windows show them within 1–2 seconds.
+If the app is not running, OBS polls the API itself (slower and quota-limited).
 
 ---
 
-## 1. Быстрый старт
+## 1. Quick start
 
-1. Откройте `config.js` и впишите свои каналы:
+1. Open `config.js` and add your channels:
 
    ```js
    twitch: ['channel_one', 'channel_two'],
@@ -41,179 +40,183 @@ YouTube-сообщения умеют ходить через приложени
    youtube: { videoId: '', apiKey: '' }
    ```
 
-2. В OBS: **Источники → + → Браузер**.
-3. Поставьте галочку **«Локальный файл»** и выберите
-   `overlay.html` (кнопка «Обзор»). Либо вставьте путь в поле URL:
+2. In OBS: **Sources → + → Browser**.
+3. Tick **"Local file"** and select `overlay.html` (the "Browse" button). Or
+   paste the path into the URL field:
 
    ```
    file:///C:/obs/chat-overlay/overlay.html
    ```
 
-4. Размер источника: **Ширина 480, Высота 900** (подгоняется под ваш экран).
-5. Отметьте **«Обновлять браузер, когда сцена становится активной»** и
-   **«Выключать источник, когда он не виден»** — так чат не висит впустую.
-6. Поставьте источник в нужный угол поверх игры/камеры.
+4. Source size: **Width 480, Height 900** (adjust to your screen).
+5. Enable **"Refresh browser when scene becomes active"** and **"Shutdown
+   source when not visible"** — so the chat does not run idle.
+6. Place the source in the desired corner above the game/camera.
 
-Фон источника прозрачный, трогать ничего не нужно.
+The source background is transparent; nothing else needs changing.
 
-> Если OBS не открывает файл из папки с кириллицей в пути, скопируйте папку
-> `chat-overlay` куда-нибудь без русских букв, например в
-> `C:\obs\chat-overlay`, и добавьте оттуда. Содержимое папки самодостаточно.
+> If OBS cannot open a file from a path containing non-Latin characters, copy
+> the `chat-overlay` folder somewhere without them, for example
+> `C:\obs\chat-overlay`, and add it from there. The folder is self-contained.
 
 ---
 
-## 2. Настройки
+## 2. Settings
 
-### Через окно «Настройки» (проще всего)
+### Through the settings window (easiest)
 
-В приложении **«Stream Helper — чат и бот»** открой настройки:
+In the **Stream Helper — chat & bot** app, open settings:
 
-- правый клик по иконке в трее → **«Настройки…»**, или
-- горячая клавиша **`Ctrl + Alt + S`**.
+- right-click the tray icon → **"Settings…"**, or
+- the **`Ctrl + Alt + S`** hotkey.
 
-Там четыре раздела:
+There are seven sections:
 
-- **«Аккаунты и каналы»** — Twitch, Kick, YouTube (канал, ссылка на эфир,
-  API-ключ). Поменял название канала — поменяй здесь один раз.
-- **«Внешний вид»** — тема оформления, шрифт, число сообщений, прозрачность,
-  плашки платформ и направление новых сообщений.
-- **«Поведение»** — демо-режим, технический статус и синхронизация с чат-ботом.
-- **«Бот»** — запуск, остановка и перезапуск встроенного бота, автозапуск и
-  переход в его панель.
+- **Accounts & Channels** — Twitch, Kick, YouTube (channel, stream link, API
+  key). If the channel is renamed, change it here once.
+- **Appearance** — theme, font, message count, opacity, platform badges, and
+  new-message direction.
+- **Behavior** — demo mode, technical status, and chat-bot sync.
+- **Bot** — start, stop, and restart the built-in bot, autostart, and a link to
+  its panel.
+- **Notifications** — Telegram stream alerts and summaries.
+- **Twitch** — Twitch application Client ID and bot authorization via the
+  device-code flow.
+- **Language** — Auto (system), Russian, or English.
 
-Доступные темы: **«Классика»**, **«Стекло»**, **«Неон»**, **«Светлая»**,
-**«Минимализм»** и **«Streamlabs»**. Тема применяется сразу к обоим оверлеям
-после сохранения.
-- В **«Поведении»** есть синхронизация с чат-ботом: при сохранении канал
-  Twitch и данные YouTube также записываются в `chat-desktop/bot/config.js`,
-  и приложение перезапускает бота само.
+Available themes: **Classic**, **Glass**, **Neon**, **Light**, **Minimal**, and
+**Modern**. The theme applies to both overlays right after saving.
+- **Behavior** also has chat-bot sync: on save, the Twitch channel and YouTube
+  data are written to `chat-desktop/bot/config.js`, and the app restarts the bot
+  automatically.
 
-Сохранение пишет файл `overlay-settings.js` рядом с `overlay.html`.
-Его читают **оба** оверлея: OBS и окно поверх игры. В окне поверх игры
-изменения применяются сразу, в OBS — после обновления источника
-(правый клик по источнику → **«Обновить»**).
+Saving writes `overlay-settings.js` next to `overlay.html`. It is read by
+**both** overlays: OBS and the in-game window. In the in-game window changes
+apply immediately; in OBS, after refreshing the source (right-click the source
+→ **"Refresh"**).
 
-> `overlay-settings.js` главнее `config.js`. Если канал «не меняется»,
-> проверь, нет ли там старого значения, или нажми в настройках
-> **«Вернуть config.js»**.
+> `overlay-settings.js` overrides `config.js`. If a channel "does not change",
+> check for an old value there, or click **"Reset to config.js"** in settings.
 
-### Через `config.js` (значения по умолчанию)
+### Through `config.js` (defaults)
 
-| Параметр | Что делает |
+| Parameter | What it does |
 |---|---|
-| `twitch` | массив каналов, напр. `['nordwind', 'kisa']` |
-| `kick` | массив каналов Kick |
-| `youtube.channelId` | ID канала (`UC…`) или `@ник` — оверлей сам находит текущий эфир |
-| `youtube.videoId` | id конкретной трансляции (`watch?v=**ЭТО**`), необязательно |
-| `youtube.apiKey` | ключ YouTube Data API v3 |
-| `youtube.relay` | брать сообщения из приложения `chat-desktop` (по умолчанию да) |
-| `youtube.pollMs` | интервал для прямого режима через API, мс (12 000); через приложение не используется |
-| `maxMessages` | сколько сообщений на экране (по умолчанию 14) |
-| `fontSize` | размер шрифта, от него масштабируется всё (24) |
-| `theme` | тема: `'classic'`, `'glass'`, `'neon'`, `'soft'`, `'minimal'` или `'streamlabs'` |
-| `bgOpacity` | прозрачность плашки: 0 — полностью прозрачная, 100 — плотная (58) |
-| `showPlatform` | показывать плашку TWITCH / YOUTUBE / KICK |
-| `align` | `'bottom'` (новые снизу) или `'top'` |
-| `demo` | `true` — фейковый чат для проверки вида |
-| `debug` | `true` — технический статус подключений в углу |
+| `twitch` | array of channels, e.g. `['nordwind', 'kisa']` |
+| `kick` | array of Kick channels |
+| `youtube.channelId` | channel ID (`UC…`) or `@handle` — the overlay finds the current stream |
+| `youtube.videoId` | specific stream id (`watch?v=**THIS**`), optional |
+| `youtube.apiKey` | YouTube Data API v3 key |
+| `youtube.relay` | take messages from the `chat-desktop` app (default yes) |
+| `youtube.pollMs` | interval for direct API mode, ms (12,000); unused through the app |
+| `maxMessages` | messages on screen (default 14) |
+| `fontSize` | font size; everything scales from it (24) |
+| `theme` | theme: `'classic'`, `'glass'`, `'neon'`, `'soft'`, `'minimal'`, or `'modern'` |
+| `bgOpacity` | badge opacity: 0 — fully transparent, 100 — solid (58) |
+| `showPlatform` | show the TWITCH / YOUTUBE / KICK badge |
+| `align` | `'bottom'` (new messages at the bottom) or `'top'` |
+| `demo` | `true` — fake chat for checking the look |
+| `debug` | `true` — connection status in the corner |
 
-### Через адрес источника (переопределяет `config.js`)
+### Through the source URL (overrides `config.js`)
 
-Удобно, когда не хочется лезть в файл:
+Convenient when you do not want to edit a file:
 
 ```
 overlay.html?twitch=nordwind,kisa&limit=12&size=30
 ```
 
-| Параметр | Пример | Значение |
+| Parameter | Example | Meaning |
 |---|---|---|
-| `twitch` | `?twitch=a,b` | каналы Twitch через запятую |
-| `kick` | `?kick=a` | каналы Kick |
-| `youtube` | `?youtube=VIDEO_ID` | id трансляции |
-| `ytchannel` | `?ytchannel=@your_channel` | канал: сам находит текущий эфир |
-| `ytkey` | `?ytkey=AIza...` | API-ключ YouTube |
-| `limit` | `?limit=12` | сообщений на экране |
-| `size` | `?size=32` | размер шрифта |
-| `theme` | `?theme=neon` | тема оформления |
-| `opacity` | `?opacity=40` | прозрачность плашки, 0–100 |
-| `relay` | `?relay=0` | не брать YouTube-сообщения из приложения |
-| `poll` | `?poll=15000` | частота опроса YouTube, мс |
-| `platform` | `?platform=0` | выключить плашки платформ |
-| `align` | `?align=top` | новые сообщения сверху |
-| `demo` | `?demo=1` | демо-чат |
-| `debug` | `?debug=1` | статус подключений |
+| `twitch` | `?twitch=a,b` | comma-separated Twitch channels |
+| `kick` | `?kick=a` | Kick channels |
+| `youtube` | `?youtube=VIDEO_ID` | stream id |
+| `ytchannel` | `?ytchannel=@your_channel` | channel: finds the current stream itself |
+| `ytkey` | `?ytkey=AIza...` | YouTube API key |
+| `limit` | `?limit=12` | messages on screen |
+| `size` | `?size=32` | font size |
+| `theme` | `?theme=neon` | appearance theme |
+| `opacity` | `?opacity=40` | badge opacity, 0–100 |
+| `relay` | `?relay=0` | do not take YouTube messages from the app |
+| `poll` | `?poll=15000` | YouTube poll interval, ms |
+| `platform` | `?platform=0` | disable platform badges |
+| `align` | `?align=top` | new messages at the top |
+| `demo` | `?demo=1` | demo chat |
+| `debug` | `?debug=1` | connection status |
 
-> Если в адресе есть `?`, путь к локальному файлу в OBS лучше вставлять
-> вручную, а не через «Обзор» — OBS иногда теряет параметры.
+> If the URL contains `?`, it is better to paste the local file path into OBS
+> manually rather than through "Browse" — OBS sometimes drops parameters.
 
 ---
 
-## 3. YouTube: где взять ключ и канал
+## 3. YouTube: where to get a key and channel
 
-1. Откройте <https://console.cloud.google.com/> → создайте проект.
-2. **APIs & Services → Library** → включите **YouTube Data API v3**.
+1. Open <https://console.cloud.google.com/> → create a project.
+2. **APIs & Services → Library** → enable **YouTube Data API v3**.
 3. **APIs & Services → Credentials → Create credentials → API key**.
-4. Скопируйте ключ в `config.js` (`youtube.apiKey`) или в `?ytkey=`.
+4. Copy the key into `config.js` (`youtube.apiKey`) or `?ytkey=`.
 
-Дальше достаточно указать канал — оверлей сам находит текущий эфир:
+Then it is enough to specify the channel — the overlay finds the current stream
+itself:
 
 ```js
 youtube: {
-  channelId: 'UCxxxxxxxxxxxxxxxxxxxxxx', // или '@your_channel'
+  channelId: 'UCxxxxxxxxxxxxxxxxxxxxxx', // or '@your_channel'
   videoId: '',
   apiKey: 'AIza...'
 }
 ```
 
-ID канала: страница канала → «Ещё» → «Поделиться» → «Скопировать ID канала»
-(начинается с `UC`). Можно просто написать `@ник` — оверлей его разрешит.
+Channel ID: channel page → "More" → "Share" → "Copy channel ID" (starts with
+`UC`). You can also just write `@handle` — the overlay resolves it.
 
-Если нужна конкретная трансляция (например, премьера, которой ещё нет в
-поиске), впишите `videoId` — часть ссылки после `v=` (для `youtu.be/XXXX`
-это сам `XXXX`). Тогда поиск по каналу не выполняется.
+If you need a specific stream (for example, a premiere that is not in search
+yet), enter `videoId` — the part of the link after `v=` (for `youtu.be/XXXX` it
+is `XXXX` itself). Channel search is then skipped.
 
-Ключ бесплатный, но у Data API лимит — **10 000 единиц в день**, а один
-опрос чата стоит 5 единиц. Поэтому в прямом режиме интервал 12 секунд
-(это ~6,5 часов эфира), а поиск эфира идёт через плейлист загрузок канала,
-а не через `search.list` (у поиска отдельный лимит всего 100 запросов в день).
+The key is free, but the Data API has a limit — **10,000 units per day**, and
+one chat poll costs 5 units. That is why direct mode uses a 12-second interval
+(about 6.5 hours of stream), and stream discovery goes through the channel's
+uploads playlist instead of `search.list` (search has its own limit of only 100
+requests per day).
 
-На практике ключ для чтения почти не нужен: приложение `chat-desktop` читает
-чат напрямую со страницы YouTube — без квоты и с задержкой 1–2 секунды, —
-а OBS забирает готовые сообщения. Ключ остаётся для бота и для запасного
-режима, когда приложение выключено.
-
----
-
-## 4. Про VK Play / VK Видео / Trovo
-
-Эти платформы **не поддерживаются напрямую**: их чат нельзя читать из
-статичной страницы — нужен OAuth-токен приложения и серверный прокси
-(у VK ещё и подпись запросов). Варианты, если чат нужен именно оттуда:
-
-- **Restream Studio / Restream Chat** — читает VK Play, Trovo, Twitch,
-  YouTube и отдаёт один виджет для OBS.
-- **VK Play**: официальный чат-виджет в панели стримера (iframe) можно
-  добавить в OBS как Browser Source напрямую.
-- Сторонние сервисы оверлеев (StreamElements, Streamlabs, BotRix) —
-  у большинства есть мультичат-виджет со ссылкой для OBS.
-
-Twitch и Kick в этом оверлее читаются напрямую и токенов не требуют.
+In practice the key is almost unnecessary for reading: the `chat-desktop` app
+reads chat directly from the YouTube page — no quota and 1–2 seconds of
+latency — and OBS takes the ready messages. The key remains for the bot and for
+the fallback mode when the app is off.
 
 ---
 
-## 5. Вид и кастомизация
+## 4. About VK Play / VK Video / Trovo
 
-Всё оформление — в блоке `<style>` в начале `overlay.html`.
+These platforms are **not supported directly**: their chat cannot be read from
+a static page — it requires an app OAuth token and a server-side proxy (VK also
+requires request signing). Options if you need chat from there:
+
+- **Restream Studio / Restream Chat** — reads VK Play, Trovo, Twitch, YouTube,
+  and provides one widget for OBS.
+- **VK Play**: the official chat widget in the streamer panel (iframe) can be
+  added to OBS as a Browser Source directly.
+- Third-party overlay services (StreamElements, Streamlabs, BotRix) — most have
+  a multi-chat widget with an OBS link.
+
+Twitch and Kick are read directly by this overlay and require no tokens.
+
+---
+
+## 5. Look and customization
+
+All styling is in the `<style>` block at the top of `overlay.html`.
 
 ```css
 :root {
-  --bg: rgba(10, 10, 14, 0.58);  /* фон плашки, 4-е число = прозрачность */
-  --fg: #f4f4f7;                 /* цвет текста */
+  --bg: rgba(10, 10, 14, 0.58);  /* badge background, 4th number = opacity */
+  --fg: #f4f4f7;                 /* text color */
   --radius: calc(var(--font-size) * 0.46);
 }
 ```
 
-Цвет акцента (полоска слева) и цвет ников по платформам:
+Accent color (left stripe) and nick colors per platform:
 
 ```css
 .msg.p-twitch  { --accent: #9146ff; }
@@ -221,38 +224,38 @@ Twitch и Kick в этом оверлее читаются напрямую и �
 .msg.p-kick    { --accent: #53fc18; }
 ```
 
-Хотите совсем без плашек (просто текст с тенью) — замените у `.msg`
-`background: var(--bg);` на `background: transparent;`.
+If you want no badges at all (just text with a shadow), replace
+`background: var(--bg);` on `.msg` with `background: transparent;`.
 
 ---
 
-## 6. Если не работает
+## 6. Troubleshooting
 
-| Симптом | Что делать |
+| Symptom | What to do |
 |---|---|
-| Пусто, ничего нет | добавьте `?debug=1` к адресу источника — увидите причину; проверьте, что канал написан без `@`/`#` |
-| Twitch молчит | канал существует? проверьте логин в браузере: `twitch.tv/имя_канала` |
-| YouTube: «нет активного чата» | эфир ещё не начался или уже закончился / неверный `videoId` |
-| YouTube: «ошибка ключа» или пусто, Twitch работает | проверьте `channelId` (не перепутан ли с пустым каналом-тёзкой) и лимит: 10 000 единиц в день, один опрос — 5 |
-| Kick пусто | неофициальное API, часто режется по региону — включите VPN либо уберите Kick |
-| Смайлы не грузятся | нужен интернет у OBS; корпоративный/домашний фильтр может блокировать CDN |
-| Старые сообщения висят | уменьшите `maxMessages` |
-| Чат обрезан по краям | увеличьте размер источника в OBS или уменьшите `size` |
-| После сворачивания сцены чат умер | включите «Обновлять браузер, когда сцена становится активной» |
+| Empty, nothing at all | add `?debug=1` to the source URL to see the reason; make sure the channel is written without `@`/`#` |
+| Twitch is silent | does the channel exist? check the login in a browser: `twitch.tv/channel_name` |
+| YouTube: "no active chat" | the stream has not started or has already ended / wrong `videoId` |
+| YouTube: "key error" or empty, Twitch works | check `channelId` (not confused with an empty same-name channel) and the limit: 10,000 units per day, one poll — 5 |
+| Kick is empty | unofficial API, often blocked by region — enable a VPN or remove Kick |
+| Emotes do not load | OBS needs internet; a corporate/home filter may block the CDN |
+| Old messages stay | reduce `maxMessages` |
+| Chat is cut off at the edges | increase the source size in OBS or reduce `size` |
+| Chat died after minimizing the scene | enable "Refresh browser when scene becomes active" |
 
-Проверить внешний вид без стрима: добавьте `?demo=1` к адресу — пойдёт
-фейковый чат с трёх платформ.
+To check the look without streaming: add `?demo=1` to the URL — a fake chat
+from three platforms starts.
 
 ---
 
-## 7. Ограничения
+## 7. Limitations
 
-- Twitch читается анонимно: отправлять сообщения оверлей не может, только
-  показывать. Для отправки нужен OAuth-токен и отдельный бот.
-- Анонимный Twitch-чат иногда не отдаёт сообщения в каналах с
-  ограничениями по «только подписчикам»/верификации — это ограничение
-  самого Twitch, не оверлея.
-- Kick использует неофициальный Pusher-канал, стабильность не гарантирована.
-- YouTube-ключ хранится в файле в открытом виде — не публикуйте `config.js`,
-  если не хотите светить ключ (ограничьте его в Google Cloud по HTTP-referrer
-  или используйте отдельный проект).
+- Twitch is read anonymously: the overlay cannot send messages, only display
+  them. Sending requires an OAuth token and a separate bot.
+- Anonymous Twitch chat sometimes does not deliver messages in channels with
+  "subscribers-only"/verification restrictions — this is a Twitch limitation,
+  not the overlay's.
+- Kick uses an unofficial Pusher channel; stability is not guaranteed.
+- The YouTube key is stored in the file in plain text — do not publish
+  `config.js` if you do not want to expose the key (restrict it in Google Cloud
+  by HTTP referrer or use a separate project).

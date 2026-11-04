@@ -313,6 +313,122 @@ function syncStreamAlerts(raw, options) {
   }
 }
 
+function twitchValues(raw) {
+  const source = raw || {};
+  return {
+    clientId: String(source.clientId == null ? '' : source.clientId).trim(),
+    clientSecret: String(source.clientSecret == null ? '' : source.clientSecret).trim(),
+    botUsername: String(source.botUsername == null ? '' : source.botUsername).trim()
+  };
+}
+
+function readTwitchConfig(file) {
+  if (!file || !fs.existsSync(file)) {
+    return { ok: false, reason: 'not-found', file: file || '' };
+  }
+
+  let source = fs.readFileSync(file, 'utf8');
+  if (source.charCodeAt(0) === 0xFEFF) source = source.slice(1);
+
+  try {
+    const config = evaluateConfig(source, file);
+    const twitch = config.twitch || {};
+    return {
+      ok: true,
+      file: file,
+      values: twitchValues({
+        clientId: twitch.clientId,
+        clientSecret: twitch.clientSecret,
+        botUsername: twitch.botUsername
+      })
+    };
+  } catch (error) {
+    return { ok: false, reason: 'error', file: file, message: 'config.js сейчас некорректен: ' + error.message };
+  }
+}
+
+function syncTwitchConfig(raw, options) {
+  const opts = options || {};
+  const file = opts.file;
+  const log = opts.log || function () {};
+  const values = twitchValues(raw);
+
+  if (!file || !fs.existsSync(file)) {
+    return { ok: false, reason: 'not-found', file: file || '' };
+  }
+
+  let source;
+  const hasBom = (function () {
+    try {
+      const text = fs.readFileSync(file, 'utf8');
+      source = text;
+      return text.charCodeAt(0) === 0xFEFF;
+    } catch (error) {
+      return false;
+    }
+  })();
+
+  if (!source) return { ok: false, reason: 'error', file: file, message: 'файл не читается' };
+  if (hasBom) source = source.slice(1);
+
+  let before;
+  try {
+    before = evaluateConfig(source, file);
+  } catch (error) {
+    return { ok: false, reason: 'error', file: file, message: 'config.js сейчас некорректен: ' + error.message };
+  }
+
+  try {
+    const root = findExportsObject(source);
+    const twitch = findProperty(source, root.start, root.end, 'twitch');
+    if (!twitch || source[twitch.valueStart] !== '{') {
+      throw new Error('в config.js не найден блок twitch');
+    }
+
+    const replacements = [];
+    const beforeTwitch = before.twitch || {};
+
+    ['clientId', 'clientSecret', 'botUsername'].forEach(function (key) {
+      const prop = findProperty(source, twitch.valueStart, twitch.valueEnd, key);
+      if (!prop) throw new Error('в config.js не найдено поле twitch.' + key);
+      const oldValue = String(beforeTwitch[key] == null ? '' : beforeTwitch[key]);
+      if (oldValue === values[key]) return;
+      replacements.push({ start: prop.valueStart, end: prop.valueEnd, text: quote(values[key]) });
+    });
+
+    if (!replacements.length) {
+      return { ok: true, changed: false, file: file, values: values };
+    }
+
+    replacements.sort(function (a, b) { return b.start - a.start; });
+    replacements.forEach(function (replacement) {
+      source = source.slice(0, replacement.start) + replacement.text + source.slice(replacement.end);
+    });
+
+    const after = evaluateConfig(source, file);
+    const afterTwitch = after.twitch || {};
+    ['clientId', 'clientSecret', 'botUsername'].forEach(function (key) {
+      if (String(afterTwitch[key] == null ? '' : afterTwitch[key]) !== values[key]) {
+        throw new Error('проверка twitch.' + key + ' не прошла');
+      }
+    });
+
+    const backup = file + '.bak';
+    try { fs.copyFileSync(file, backup); } catch (error) {
+      log('bot config backup failed', error.message);
+    }
+
+    const tmp = file + '.tmp';
+    fs.writeFileSync(tmp, (hasBom ? '\ufeff' : '') + source, 'utf8');
+    fs.renameSync(tmp, file);
+    log('twitch config synced', file);
+    return { ok: true, changed: true, file: file, values: values };
+  } catch (error) {
+    log('twitch config sync failed', error.message);
+    return { ok: false, reason: 'error', file: file, message: error.message };
+  }
+}
+
 function syncBotConfig(settings, options) {
   const opts = options || {};
   const file = opts.file;
@@ -450,6 +566,8 @@ module.exports = {
   syncBotConfig: syncBotConfig,
   readStreamAlerts: readStreamAlerts,
   syncStreamAlerts: syncStreamAlerts,
+  readTwitchConfig: readTwitchConfig,
+  syncTwitchConfig: syncTwitchConfig,
   // для тестов
   _findExportsObject: findExportsObject,
   _findProperty: findProperty,

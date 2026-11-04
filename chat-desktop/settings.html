@@ -61,6 +61,7 @@
 
   .tabs {
     display: flex;
+    flex-wrap: wrap;
     gap: 4px;
     padding: 0 26px;
     border-bottom: 1px solid var(--line);
@@ -332,7 +333,7 @@
 
   .theme-card[data-theme="minimal"] .theme-preview b { color: #d2ffbf; }
 
-  .theme-card[data-theme="streamlabs"] .theme-preview {
+  .theme-card[data-theme="modern"] .theme-preview {
     background: rgba(0, 0, 0, 0.38);
     color: #ffffff;
     display: flex;
@@ -341,7 +342,7 @@
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
   }
 
-  .theme-card[data-theme="streamlabs"] .theme-preview b {
+  .theme-card[data-theme="modern"] .theme-preview b {
     flex: 0 0 38%;
     text-align: right;
     color: #ffffff;
@@ -349,7 +350,7 @@
     text-shadow: 0 0 6px rgba(145, 70, 255, 0.9), 0 1px 2px #000;
   }
 
-  .theme-card[data-theme="streamlabs"] .theme-preview i {
+  .theme-card[data-theme="modern"] .theme-preview i {
     flex: 1 1 auto;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
   }
@@ -437,6 +438,8 @@
     font-size: 13px;
   }
 
+  .switch .switch-text { display: block; }
+
   .switch small {
     display: block;
     margin-top: 2px;
@@ -522,6 +525,76 @@
     margin-top: 8px;
   }
 
+  .lang-options {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  .lang-card {
+    appearance: none;
+    border: 1px solid var(--line);
+    background: #0e1019;
+    color: var(--muted);
+    border-radius: 10px;
+    padding: 12px 12px;
+    cursor: pointer;
+    text-align: left;
+    font: inherit;
+    transition: border-color 120ms, box-shadow 120ms;
+  }
+
+  .lang-card:hover { border-color: #3a405c; }
+
+  .lang-card.active {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(169, 112, 255, 0.18);
+    color: var(--text);
+  }
+
+  .lang-card b { display: block; font-size: 13px; margin-bottom: 3px; }
+  .lang-card small { color: var(--muted); font-size: 11.5px; }
+
+  .auth-code {
+    display: inline-block;
+    margin: 4px 0;
+    padding: 6px 12px;
+    border-radius: 8px;
+    background: rgba(169, 112, 255, 0.16);
+    border: 1px solid rgba(169, 112, 255, 0.4);
+    color: #f2e9ff;
+    font: 700 18px/1.2 "Consolas", "Courier New", monospace;
+    letter-spacing: 0.18em;
+  }
+
+  .auth-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 0 10px;
+    font-weight: 700;
+  }
+
+  .auth-status .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 700;
+    background: #2a2e43;
+    color: var(--muted);
+  }
+
+  .auth-status.ok .badge { background: rgba(86, 211, 100, 0.16); color: var(--ok); }
+  .auth-status.pending .badge { background: rgba(227, 179, 65, 0.16); color: #e3b341; }
+  .auth-status.err .badge { background: rgba(255, 123, 114, 0.16); color: var(--err); }
+
+  .auth-link {
+    color: #bf94ff;
+    word-break: break-all;
+  }
+
   .content::-webkit-scrollbar { width: 10px; }
   .content::-webkit-scrollbar-thumb { background: #262a3d; border-radius: 10px; border: 3px solid var(--bg); }
 
@@ -539,18 +612,20 @@
 <div class="app">
   <header class="head">
     <div>
-      <h1>Настройки чата</h1>
-      <p>Оверлей для OBS, окно поверх игры и встроенный чат-бот — один набор настроек</p>
+      <h1 data-i18n="appTitle">Настройки чата</h1>
+      <p data-i18n="appSubtitle">Оверлей для OBS, окно поверх игры и встроенный чат-бот — один набор настроек</p>
     </div>
-    <button class="ghost small" id="open-folder" type="button">Папка с настройками</button>
+    <button class="ghost small" id="open-folder" type="button" data-i18n="openFolder">Папка с настройками</button>
   </header>
 
-  <nav class="tabs" aria-label="Разделы настроек">
-    <button class="tab active" type="button" data-tab="accounts">Аккаунты и каналы</button>
-    <button class="tab" type="button" data-tab="look">Внешний вид</button>
-    <button class="tab" type="button" data-tab="behavior">Поведение</button>
-    <button class="tab" type="button" data-tab="bot">Бот</button>
-    <button class="tab" type="button" data-tab="alerts">Уведомления</button>
+  <nav class="tabs" aria-label="Разделы настроек" data-i18n-aria-label="tabsAria">
+    <button class="tab active" type="button" data-tab="accounts" data-i18n="tabAccounts">Аккаунты и каналы</button>
+    <button class="tab" type="button" data-tab="look" data-i18n="tabLook">Внешний вид</button>
+    <button class="tab" type="button" data-tab="behavior" data-i18n="tabBehavior">Поведение</button>
+    <button class="tab" type="button" data-tab="bot" data-i18n="tabBot">Бот</button>
+    <button class="tab" type="button" data-tab="alerts" data-i18n="tabAlerts">Уведомления</button>
+    <button class="tab" type="button" data-tab="twitch" data-i18n="tabTwitchAuth">Twitch</button>
+    <button class="tab" type="button" data-tab="language" data-i18n="tabLanguage">Язык</button>
   </nav>
 
   <main class="content" id="form">
@@ -559,14 +634,14 @@
         <div class="card-head">
           <span class="dot twitch"></span>
           <div>
-            <h2>Twitch</h2>
-            <p>Читается анонимно — логин и токены не нужны</p>
+            <h2 data-i18n="twitchTitle">Twitch</h2>
+            <p data-i18n="twitchDesc">Читается анонимно — логин и токены не нужны</p>
           </div>
         </div>
         <label class="field">
-          <span>Каналы</span>
-          <input type="text" id="twitch" placeholder="your_channel, второй_канал" autocomplete="off" spellcheck="false">
-          <small>Можно несколько — через запятую. Без @ и #. Если канал переименован, поменяй его здесь.</small>
+          <span data-i18n="twitchChannels">Каналы</span>
+          <input type="text" id="twitch" placeholder="your_channel, второй_канал" data-i18n-placeholder="twitchPlaceholder" autocomplete="off" spellcheck="false">
+          <small data-i18n="twitchHelp">Можно несколько — через запятую. Без @ и #. Если канал переименован, поменяй его здесь.</small>
         </label>
       </div>
 
@@ -574,14 +649,14 @@
         <div class="card-head">
           <span class="dot kick"></span>
           <div>
-            <h2>Kick</h2>
-            <p>Неофициальное API — может не работать без VPN</p>
+            <h2 data-i18n="kickTitle">Kick</h2>
+            <p data-i18n="kickDesc">Неофициальное API — может не работать без VPN</p>
           </div>
         </div>
         <label class="field">
-          <span>Каналы</span>
-          <input type="text" id="kick" placeholder="channel_one, channel_two" autocomplete="off" spellcheck="false">
-          <small>Через запятую. Оставь пустым, если Kick не нужен.</small>
+          <span data-i18n="kickChannels">Каналы</span>
+          <input type="text" id="kick" placeholder="channel_one, channel_two" data-i18n-placeholder="kickPlaceholder" autocomplete="off" spellcheck="false">
+          <small data-i18n="kickHelp">Через запятую. Оставь пустым, если Kick не нужен.</small>
         </label>
       </div>
 
@@ -589,59 +664,59 @@
         <div class="card-head">
           <span class="dot youtube"></span>
           <div>
-            <h2>YouTube</h2>
-            <p>Эфир находится автоматически; чат читается без дневной квоты</p>
+            <h2 data-i18n="youtubeTitle">YouTube</h2>
+            <p data-i18n="youtubeDesc">Эфир находится автоматически; чат читается без дневной квоты</p>
           </div>
         </div>
 
         <div class="grid-2">
           <label class="field">
-            <span>Канал</span>
-            <input type="text" id="yt-channel" placeholder="UC… или @ник" autocomplete="off" spellcheck="false">
-            <small>ID канала (UC…) или @ник.</small>
+            <span data-i18n="youtubeChannel">Канал</span>
+            <input type="text" id="yt-channel" placeholder="UC… или @ник" data-i18n-placeholder="youtubeChannelPlaceholder" autocomplete="off" spellcheck="false">
+            <small data-i18n="youtubeChannelHelp">ID канала (UC…) или @ник.</small>
           </label>
           <label class="field">
-            <span>Конкретная трансляция</span>
-            <input type="text" id="yt-video" placeholder="необязательно" autocomplete="off" spellcheck="false">
-            <small>ID видео, если нужен не текущий эфир.</small>
+            <span data-i18n="youtubeVideo">Конкретная трансляция</span>
+            <input type="text" id="yt-video" placeholder="необязательно" data-i18n-placeholder="youtubeVideoPlaceholder" autocomplete="off" spellcheck="false">
+            <small data-i18n="youtubeVideoHelp">ID видео, если нужен не текущий эфир.</small>
           </label>
         </div>
 
         <label class="field">
-          <span>Ключ YouTube Data API v3</span>
+          <span data-i18n="youtubeApiKey">Ключ YouTube Data API v3</span>
           <div class="secret">
-            <input type="password" id="yt-key" placeholder="AIza…" autocomplete="off" spellcheck="false">
-            <button class="ghost small" id="toggle-key" type="button">Показать</button>
+            <input type="password" id="yt-key" placeholder="AIza…" data-i18n-placeholder="youtubeApiKeyPlaceholder" autocomplete="off" spellcheck="false">
+            <button class="ghost small" id="toggle-key" type="button" data-i18n="toggleShow">Показать</button>
           </div>
-          <small>Нужен боту для ответов в чат и как запасной источник чтения. Для самого чата не обязателен.</small>
+          <small data-i18n="youtubeApiKeyHelp">Нужен боту для ответов в чат и как запасной источник чтения. Для самого чата не обязателен.</small>
         </label>
 
         <div class="grid-2">
           <label class="field">
-            <span>Источник чата</span>
+            <span data-i18n="youtubeSource">Источник чата</span>
             <select id="yt-source">
-              <option value="auto">Авто — без квоты (рекомендуется)</option>
-              <option value="api">Только Data API (с квотой)</option>
+              <option value="auto" data-i18n="youtubeSourceAuto">Авто — без квоты (рекомендуется)</option>
+              <option value="api" data-i18n="youtubeSourceApi">Только Data API (с квотой)</option>
             </select>
-            <small>«Авто» читает сам чат YouTube: без дневного лимита, сообщения приходят через 1–2 секунды.</small>
+            <small data-i18n="youtubeSourceHelp">«Авто» читает сам чат YouTube: без дневного лимита, сообщения приходят через 1–2 секунды.</small>
           </label>
           <label class="field">
-            <span>Интервал опроса API, сек</span>
+            <span data-i18n="youtubePoll">Интервал опроса API, сек</span>
             <input type="number" id="yt-poll" min="5" max="600" step="1" inputmode="numeric">
-            <small>Только для запасного варианта через Data API.</small>
+            <small data-i18n="youtubePollHelp">Только для запасного варианта через Data API.</small>
           </label>
         </div>
 
         <label class="switch">
           <input type="checkbox" id="yt-relay">
           <span>
-            Раздавать сообщения из этого приложения в OBS
-            <small>Один читатель на два окна — в OBS сообщения приходят мгновенно.</small>
+            <span class="switch-text" data-i18n="youtubeRelay">Раздавать сообщения из этого приложения в OBS</span>
+            <small data-i18n="youtubeRelayHelp">Один читатель на два окна — в OBS сообщения приходят мгновенно.</small>
           </span>
         </label>
       </div>
 
-      <div class="note">
+      <div class="note" data-i18n="syncNote">
         Если включена синхронизация (вкладка «Поведение»), эти же каналы, ключ
         и ссылка YouTube сохраняются в bot/config.js — в том числе для уведомлений
         о начале и конце стрима. Встроенный бот перезапустится сам и сразу
@@ -652,27 +727,27 @@
         <div class="card-head">
           <span class="dot" style="background:#00d9a5;"></span>
           <div>
-            <h2>OBS — подключить оверлей</h2>
-            <p>Быстрое добавление чата в OBS как Browser Source</p>
+            <h2 data-i18n="obsTitle">OBS — подключить оверлей</h2>
+            <p data-i18n="obsDesc">Быстрое добавление чата в OBS как Browser Source</p>
           </div>
         </div>
 
         <p class="path" id="overlay-path" style="word-break:break-all; margin-bottom:12px;"></p>
 
         <div class="bot-actions">
-          <button class="primary" id="obs-copy-url" type="button">Скопировать ссылку overlay.html</button>
-          <button class="ghost" id="obs-open-folder" type="button">Открыть папку с оверлеем</button>
+          <button class="primary" id="obs-copy-url" type="button" data-i18n="obsCopyBtn">Скопировать ссылку overlay.html</button>
+          <button class="ghost" id="obs-open-folder" type="button" data-i18n="obsOpenFolderBtn">Открыть папку с оверлеем</button>
         </div>
 
         <div class="note" style="margin-top:12px;">
-          <b>Как добавить в OBS:</b>
+          <b data-i18n="obsHowTo">Как добавить в OBS:</b>
           <ol style="margin:8px 0 0 18px; padding:0; line-height:1.6;">
-            <li>OBS → Источники → <b>+</b> → <b>Браузер</b> (Browser Source)</li>
-            <li>Название: <i>Мультичат</i> → OK</li>
-            <li>Вставьте скопированную ссылку в поле <b>URL</b></li>
-            <li>Ширина: <b>520</b>, Высота: <b>880</b></li>
-            <li>Включите <b>Обновлять браузер, когда сцена становится активной</b></li>
-            <li>OK — перетащите источник в нужное место</li>
+            <li data-i18n-html="obsStep1">OBS → Источники → <b>+</b> → <b>Браузер</b> (Browser Source)</li>
+            <li data-i18n-html="obsStep2">Название: <i>Мультичат</i> → OK</li>
+            <li data-i18n-html="obsStep3">Вставьте скопированную ссылку в поле <b>URL</b></li>
+            <li data-i18n-html="obsStep4">Ширина: <b>520</b>, Высота: <b>880</b></li>
+            <li data-i18n-html="obsStep5">Включите <b>Обновлять браузер, когда сцена становится активной</b></li>
+            <li data-i18n-html="obsStep6">OK — перетащите источник в нужное место</li>
           </ol>
         </div>
       </div>
@@ -682,44 +757,44 @@
       <div class="card">
         <div class="card-head">
           <div>
-            <h2>Внешний вид</h2>
-            <p>Применяется и в OBS, и поверх игры</p>
+            <h2 data-i18n="lookTitle">Внешний вид</h2>
+            <p data-i18n="lookDesc">Применяется и в OBS, и поверх игры</p>
           </div>
         </div>
 
         <div class="field">
-          <span>Тема оформления</span>
+          <span data-i18n="themeLabel">Тема оформления</span>
           <div class="themes" id="themes">
             <button class="theme-card" type="button" data-theme="classic" aria-pressed="false">
-              <span class="theme-preview"><b>Stream Helper</b><i>Привет, чат!</i></span>
-              <span class="theme-name">Классика</span>
+              <span class="theme-preview"><b>Stream Helper</b><i data-i18n="themePreviewHello">Привет, чат!</i></span>
+              <span class="theme-name" data-i18n="themeClassic">Классика</span>
             </button>
             <button class="theme-card" type="button" data-theme="glass" aria-pressed="false">
-              <span class="theme-preview"><b>Stream Helper</b><i>Привет, чат!</i></span>
-              <span class="theme-name">Стекло</span>
+              <span class="theme-preview"><b>Stream Helper</b><i data-i18n="themePreviewHello">Привет, чат!</i></span>
+              <span class="theme-name" data-i18n="themeGlass">Стекло</span>
             </button>
             <button class="theme-card" type="button" data-theme="neon" aria-pressed="false">
-              <span class="theme-preview"><b>Stream Helper</b><i>Привет, чат!</i></span>
-              <span class="theme-name">Неон</span>
+              <span class="theme-preview"><b>Stream Helper</b><i data-i18n="themePreviewHello">Привет, чат!</i></span>
+              <span class="theme-name" data-i18n="themeNeon">Неон</span>
             </button>
             <button class="theme-card" type="button" data-theme="soft" aria-pressed="false">
-              <span class="theme-preview"><b>Stream Helper</b><i>Привет, чат!</i></span>
-              <span class="theme-name">Светлая</span>
+              <span class="theme-preview"><b>Stream Helper</b><i data-i18n="themePreviewHello">Привет, чат!</i></span>
+              <span class="theme-name" data-i18n="themeSoft">Светлая</span>
             </button>
             <button class="theme-card" type="button" data-theme="minimal" aria-pressed="false">
-              <span class="theme-preview"><b>Stream Helper</b><i>Привет, чат!</i></span>
-              <span class="theme-name">Минимализм</span>
+              <span class="theme-preview"><b>Stream Helper</b><i data-i18n="themePreviewHello">Привет, чат!</i></span>
+              <span class="theme-name" data-i18n="themeMinimal">Минимализм</span>
             </button>
-            <button class="theme-card" type="button" data-theme="streamlabs" aria-pressed="false">
-              <span class="theme-preview"><b>Stream Helper</b><i>Привет, чат!</i></span>
-              <span class="theme-name">Streamlabs</span>
+            <button class="theme-card" type="button" data-theme="modern" aria-pressed="false">
+              <span class="theme-preview"><b>Stream Helper</b><i data-i18n="themePreviewHello">Привет, чат!</i></span>
+              <span class="theme-name" data-i18n="themeModern">Модерн</span>
             </button>
           </div>
-          <small>В «Минимализме» и «Streamlabs» плашек нет, поэтому прозрачность на них не влияет.</small>
+          <small data-i18n="themeNote">В «Минимализме» и «Модерне» плашек нет, поэтому прозрачность на них не влияет.</small>
         </div>
 
         <label class="field">
-          <span>Сообщений на экране</span>
+          <span data-i18n="maxMessages">Сообщений на экране</span>
           <div class="range-row">
             <input type="range" id="max-messages" min="1" max="100" step="1">
             <span class="value" id="max-messages-value">14</span>
@@ -727,7 +802,7 @@
         </label>
 
         <label class="field">
-          <span>Размер шрифта</span>
+          <span data-i18n="fontSize">Размер шрифта</span>
           <div class="range-row">
             <input type="range" id="font-size" min="10" max="72" step="1">
             <span class="value" id="font-size-value">24 px</span>
@@ -735,7 +810,7 @@
         </label>
 
         <label class="field">
-          <span>Прозрачность плашки</span>
+          <span data-i18n="bgOpacity">Прозрачность плашки</span>
           <div class="range-row">
             <input type="range" id="bg-opacity" min="0" max="100" step="1">
             <span class="value" id="bg-opacity-value">58%</span>
@@ -745,16 +820,16 @@
         <label class="switch">
           <input type="checkbox" id="show-platform">
           <span>
-            Плашки платформ
-            <small>Показывать TWITCH / YOUTUBE / KICK перед сообщением.</small>
+            <span class="switch-text" data-i18n="showPlatform">Плашки платформ</span>
+            <small data-i18n="showPlatformHelp">Показывать TWITCH / YOUTUBE / KICK перед сообщением.</small>
           </span>
         </label>
 
         <label class="field">
-          <span>Новые сообщения</span>
+          <span data-i18n="alignLabel">Новые сообщения</span>
           <select id="align">
-            <option value="bottom">Снизу</option>
-            <option value="top">Сверху</option>
+            <option value="bottom" data-i18n="alignBottom">Снизу</option>
+            <option value="top" data-i18n="alignTop">Сверху</option>
           </select>
         </label>
       </div>
@@ -764,36 +839,36 @@
       <div class="card">
         <div class="card-head">
           <div>
-            <h2>Поведение</h2>
-            <p>Служебные режимы оверлея</p>
+            <h2 data-i18n="behaviorTitle">Поведение</h2>
+            <p data-i18n="behaviorDesc">Служебные режимы оверлея</p>
           </div>
         </div>
 
         <label class="switch">
           <input type="checkbox" id="demo">
           <span>
-            Демо-режим
-            <small>Фейковый чат для проверки внешнего вида. Реальные сообщения не показываются.</small>
+            <span class="switch-text" data-i18n="demoMode">Демо-режим</span>
+            <small data-i18n="demoModeHelp">Фейковый чат для проверки внешнего вида. Реальные сообщения не показываются.</small>
           </span>
         </label>
 
         <label class="switch">
           <input type="checkbox" id="debug">
           <span>
-            Технический статус
-            <small>Показывает состояние подключений в углу оверлея.</small>
+            <span class="switch-text" data-i18n="debugMode">Технический статус</span>
+            <small data-i18n="debugModeHelp">Показывает состояние подключений в углу оверлея.</small>
           </span>
         </label>
 
         <label class="switch">
           <input type="checkbox" id="sync-bot">
           <span>
-            Синхронизировать с чат-ботом
-            <small>Менять канал Twitch, YouTube, ключ API и ссылки в уведомлениях бота. Встроенный бот перезапустится автоматически.</small>
+            <span class="switch-text" data-i18n="syncBot">Синхронизировать с чат-ботом</span>
+            <small data-i18n="syncBotHelp">Менять канал Twitch, YouTube, ключ API и ссылки в уведомлениях бота. Встроенный бот перезапустится автоматически.</small>
           </span>
         </label>
 
-        <div class="note">
+        <div class="note" data-i18n="behaviorNote">
           Изменения применяются к окну поверх игры сразу после сохранения.
           В OBS обнови источник «Мультичат»: правый клик по источнику → «Обновить».
         </div>
@@ -807,27 +882,27 @@
         <div class="card-head">
           <span class="dot bot stopped" id="bot-dot"></span>
           <div>
-            <h2>Встроенный чат-бот</h2>
-            <p id="bot-state-text">Проверяю…</p>
+            <h2 data-i18n="botTitle">Встроенный чат-бот</h2>
+            <p id="bot-state-text" data-i18n="botState">Проверяю…</p>
           </div>
         </div>
 
         <div class="grid-2">
           <div class="field">
-            <span>Канал Twitch</span>
+            <span data-i18n="botChannelLabel">Канал Twitch</span>
             <div class="bot-value" id="bot-channel">—</div>
           </div>
           <div class="field">
-            <span>Порт панели</span>
+            <span data-i18n="botPortLabel">Порт панели</span>
             <div class="bot-value" id="bot-port">39001</div>
           </div>
         </div>
 
         <div class="bot-actions">
-          <button class="primary" id="bot-open" type="button">Открыть панель бота</button>
-          <button class="ghost" id="bot-toggle" type="button">Остановить</button>
-          <button class="ghost" id="bot-restart" type="button">Перезапустить</button>
-          <button class="ghost" id="bot-folder" type="button">Папка бота</button>
+          <button class="primary" id="bot-open" type="button" data-i18n="botOpenBtn">Открыть панель бота</button>
+          <button class="ghost" id="bot-toggle" type="button" data-i18n="botStopBtn">Остановить</button>
+          <button class="ghost" id="bot-restart" type="button" data-i18n="botRestartBtn">Перезапустить</button>
+          <button class="ghost" id="bot-folder" type="button" data-i18n="botFolderBtn">Папка бота</button>
         </div>
 
         <p class="path" id="bot-error"></p>
@@ -837,20 +912,20 @@
       <div class="card">
         <div class="card-head">
           <div>
-            <h2>Запуск</h2>
-            <p>Как бот ведёт себя при старте приложения</p>
+            <h2 data-i18n="botRunTitle">Запуск</h2>
+            <p data-i18n="botRunDesc">Как бот ведёт себя при старте приложения</p>
           </div>
         </div>
 
         <label class="switch">
           <input type="checkbox" id="bot-autostart">
           <span>
-            Запускать бота вместе с приложением
-            <small>Если выключить, бот можно запустить вручную из трея или с этой вкладки.</small>
+            <span class="switch-text" data-i18n="botAutostart">Запускать бота вместе с приложением</span>
+            <small data-i18n="botAutostartHelp">Если выключить, бот можно запустить вручную из трея или с этой вкладки.</small>
           </span>
         </label>
 
-        <div class="note">
+        <div class="note" data-i18n="botNote">
           Команды, автосообщения, модерация, баллы, розыгрыши и викторина
           настраиваются в панели бота. Здесь — только запуск и общие каналы.
         </div>
@@ -862,62 +937,61 @@
         <div class="card-head">
           <span class="dot telegram"></span>
           <div>
-            <h2>Уведомления в Telegram</h2>
-            <p>Сообщение о начале стрима и итоги после эфира</p>
+            <h2 data-i18n="alertsTitle">Уведомления в Telegram</h2>
+            <p data-i18n="alertsDesc">Сообщение о начале стрима и итоги после эфира</p>
           </div>
         </div>
 
         <label class="switch">
           <input type="checkbox" id="alerts-enabled">
           <span>
-            Отправлять уведомления в Telegram
-            <small>Бот пришлёт сообщение, когда начнётся стрим на Twitch.</small>
+            <span class="switch-text" data-i18n="alertsEnabled">Отправлять уведомления в Telegram</span>
+            <small data-i18n="alertsEnabledHelp">Бот пришлёт сообщение, когда начнётся стрим на Twitch.</small>
           </span>
         </label>
 
         <label class="switch">
           <input type="checkbox" id="alerts-offline">
           <span>
-            Присылать итоги после стрима
-            <small>Длительность, пик и среднее число зрителей, сообщения в чате,
-            действия модерации.</small>
+            <span class="switch-text" data-i18n="alertsOffline">Присылать итоги после стрима</span>
+            <small data-i18n="alertsOfflineHelp">Длительность, пик и среднее число зрителей, сообщения в чате, действия модерации.</small>
           </span>
         </label>
 
         <label class="field">
-          <span>Токен бота</span>
+          <span data-i18n="alertsToken">Токен бота</span>
           <div class="secret">
-            <input type="password" id="alerts-token" placeholder="123456789:AA…" autocomplete="off" spellcheck="false">
-            <button class="ghost small" id="toggle-alerts-token" type="button">Показать</button>
+            <input type="password" id="alerts-token" placeholder="123456789:AA…" data-i18n-placeholder="alertsTokenPlaceholder" autocomplete="off" spellcheck="false">
+            <button class="ghost small" id="toggle-alerts-token" type="button" data-i18n="toggleShow">Показать</button>
           </div>
-          <small>Создайте бота у <b>@BotFather</b> командой <b>/newbot</b> и скопируйте токен.
+          <small data-i18n-html="alertsTokenHelp">Создайте бота у <b>@BotFather</b> командой <b>/newbot</b> и скопируйте токен.
           Он сохраняется только в <b>bot/config.js</b> на этом компьютере.</small>
         </label>
 
         <div class="grid-2">
           <label class="field">
-            <span>Канал или чат</span>
-            <input type="text" id="alerts-chat" placeholder="@имя_канала или -1001234567890" autocomplete="off" spellcheck="false">
-            <small>Публичный канал — <b>@имя_канала</b>, приватный — ID <b>-100…</b>.
+            <span data-i18n="alertsChat">Канал или чат</span>
+            <input type="text" id="alerts-chat" placeholder="@имя_канала или -1001234567890" data-i18n-placeholder="alertsChatPlaceholder" autocomplete="off" spellcheck="false">
+            <small data-i18n-html="alertsChatHelp">Публичный канал — <b>@имя_канала</b>, приватный — ID <b>-100…</b>.
             Бот должен быть администратором канала.</small>
           </label>
 
           <label class="field">
-            <span>Тема (необязательно)</span>
-            <input type="number" id="alerts-thread" min="1" step="1" inputmode="numeric" placeholder="номер темы">
-            <small>Только для отдельной темы (topic) в супергруппе. В обычном канале
+            <span data-i18n="alertsThread">Тема (необязательно)</span>
+            <input type="number" id="alerts-thread" min="1" step="1" inputmode="numeric" placeholder="номер темы" data-i18n-placeholder="alertsThreadPlaceholder">
+            <small data-i18n="alertsThreadHelp">Только для отдельной темы (topic) в супергруппе. В обычном канале
             оставьте пустым.</small>
           </label>
         </div>
 
         <div class="bot-actions">
-          <button class="ghost" id="alerts-test" type="button">Отправить тестовое сообщение</button>
+          <button class="ghost" id="alerts-test" type="button" data-i18n="alertsTestBtn">Отправить тестовое сообщение</button>
         </div>
         <p class="path" id="alerts-result"></p>
         <p class="path" id="alerts-env"></p>
       </div>
 
-      <div class="note">
+      <div class="note" data-i18n-html="alertsHowTo">
         Как настроить: создайте бота у <b>@BotFather</b>, добавьте его
         <b>администратором</b> в свой Telegram-канал (с правом публикации),
         вставьте токен и <b>@имя_канала</b> выше и нажмите
@@ -925,14 +999,104 @@
         «Сохранить», и бот начнёт присылать уведомления о стримах.
       </div>
     </section>
+
+    <section class="panel" id="tab-twitch">
+      <div class="card">
+        <div class="card-head">
+          <span class="dot twitch"></span>
+          <div>
+            <h2 data-i18n="twitchAuthTitle">Twitch-авторизация бота</h2>
+            <p data-i18n="twitchAuthDesc">Подключение бота к чату Twitch через OAuth — без правки файлов</p>
+          </div>
+        </div>
+
+        <label class="field">
+          <span data-i18n="twitchAuthClientId">Client ID</span>
+          <input type="text" id="twitch-client-id" placeholder="Client ID с dev.twitch.tv/console/apps" data-i18n-placeholder="twitchAuthClientIdPlaceholder" autocomplete="off" spellcheck="false">
+          <small data-i18n-html="twitchAuthClientIdHelp">Создайте приложение на <a href="https://dev.twitch.tv/console/apps" target="_blank">dev.twitch.tv/console/apps</a>: Name — любое, OAuth Redirect URLs — <code>http://localhost:3000</code>, Category — <code>Chat Bot</code>, Client Type — <b>Public</b>.</small>
+        </label>
+
+        <div class="grid-2">
+          <label class="field">
+            <span data-i18n="twitchAuthClientSecret">Client Secret (необязательно)</span>
+            <input type="password" id="twitch-client-secret" placeholder="только для Confidential приложений" data-i18n-placeholder="twitchAuthClientSecretPlaceholder" autocomplete="off" spellcheck="false">
+            <small data-i18n="twitchAuthClientSecretHelp">Оставьте пустым, если приложение создано как Public (рекомендуется).</small>
+          </label>
+          <label class="field">
+            <span data-i18n="twitchAuthBotName">Имя бота (необязательно)</span>
+            <input type="text" id="twitch-bot-name" placeholder="имя_аккаунта_бота" data-i18n-placeholder="twitchAuthBotNamePlaceholder" autocomplete="off" spellcheck="false">
+            <small data-i18n="twitchAuthBotNameHelp">Логин аккаунта, от которого бот будет писать в чат. Можно оставить пустым — подставится сам после входа.</small>
+          </label>
+        </div>
+
+        <div class="field">
+          <span data-i18n="twitchAuthStatus">Статус авторизации</span>
+          <div class="auth-status" id="twitch-auth-status">
+            <span class="badge" id="twitch-auth-badge" data-i18n="twitchAuthStatusUnknown">Не проверено</span>
+            <span id="twitch-auth-user"></span>
+          </div>
+        </div>
+
+        <div class="note" id="twitch-device-box" hidden>
+          <div><b data-i18n="twitchAuthCodeLabel">Код для ввода:</b> <span class="auth-code" id="twitch-device-code">—</span></div>
+          <div style="margin-top:6px;">
+            <b data-i18n="twitchAuthLinkLabel">Страница активации:</b>
+            <a class="auth-link" id="twitch-device-link" href="https://www.twitch.tv/activate" target="_blank">https://www.twitch.tv/activate</a>
+          </div>
+          <div style="margin-top:6px;" data-i18n="twitchAuthWaiting">Введите код на странице Twitch и подтвердите доступ. Это окно обновится автоматически.</div>
+        </div>
+
+        <div class="bot-actions">
+          <button class="primary" id="twitch-login" type="button" data-i18n="twitchAuthLoginBtn">Войти в Twitch</button>
+          <button class="ghost" id="twitch-open-link" type="button" data-i18n="twitchAuthOpenLinkBtn" hidden>Открыть страницу Twitch</button>
+          <button class="ghost danger" id="twitch-logout" type="button" data-i18n="twitchAuthLogoutBtn">Выйти (удалить токен)</button>
+        </div>
+        <p class="path" id="twitch-auth-result"></p>
+
+        <div class="note" style="margin-top:12px;" data-i18n="twitchAuthNote">
+          После входа бот сможет писать в чат, выдавать таймауты и баны, работать с баллами и розыгрышами.
+          Для модерации бот должен быть модератором канала. Токен хранится только в bot/data/tokens.json на этом компьютере.
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="tab-language">
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <h2 data-i18n="languageTitle">Язык интерфейса</h2>
+            <p data-i18n="languageDesc">Выберите язык для настроек и интерфейса приложения</p>
+          </div>
+        </div>
+
+        <div class="lang-options" id="language-options">
+          <button class="lang-card" type="button" data-lang="auto" aria-pressed="false">
+            <b data-i18n="languageAuto">Авто (по системе)</b>
+            <small data-i18n="languageAutoHint">Русский или English — по языку Windows</small>
+          </button>
+          <button class="lang-card" type="button" data-lang="ru" aria-pressed="false">
+            <b data-i18n="languageRu">Русский</b>
+            <small data-i18n="languageRuHint">Русский интерфейс</small>
+          </button>
+          <button class="lang-card" type="button" data-lang="en" aria-pressed="false">
+            <b data-i18n="languageEn">English</b>
+            <small data-i18n="languageEnHint">English interface</small>
+          </button>
+        </div>
+
+        <div class="note" data-i18n="languageRestartNote">
+          Смена языка применяется сразу. Перезапуск не требуется.
+        </div>
+      </div>
+    </section>
   </main>
 
   <footer class="foot">
     <div class="status" id="status"></div>
     <div class="actions">
-      <button class="ghost danger" id="reset" type="button">Вернуть config.js</button>
-      <button class="ghost" id="cancel" type="button">Закрыть</button>
-      <button class="primary" id="save" type="button">Сохранить</button>
+      <button class="ghost danger" id="reset" type="button" data-i18n="reset">Вернуть config.js</button>
+      <button class="ghost" id="cancel" type="button" data-i18n="cancel">Закрыть</button>
+      <button class="primary" id="save" type="button" data-i18n="save">Сохранить</button>
     </div>
   </footer>
 </div>
@@ -944,12 +1108,78 @@
   var api = window.settingsApi;
   var dirty = false;
   var currentTheme = 'classic';
-  var THEMES = ['classic', 'glass', 'neon', 'soft', 'minimal', 'streamlabs'];
+  var THEMES = ['classic', 'glass', 'neon', 'soft', 'minimal', 'modern'];
+  var LOCALES = (window.i18n && window.i18n.locales) || {};
+  var currentLang = 'ru';
+  var currentLanguageSetting = 'auto';
+  var lastBot = null;
+  var lastTwitchAuth = null;
 
   function $(id) { return document.getElementById(id); }
 
+  function dict() { return LOCALES[currentLang] || LOCALES.ru || {}; }
+
+  function t(key) {
+    var value = dict()[key];
+    return value == null ? key : value;
+  }
+
+  function normalizeTheme(value) {
+    var theme = String(value == null ? '' : value).toLowerCase();
+    if (theme === 'streamlabs') return 'modern';
+    return THEMES.indexOf(theme) !== -1 ? theme : 'classic';
+  }
+
+  function applyLanguage(lang, setting) {
+    currentLang = lang === 'en' ? 'en' : 'ru';
+    currentLanguageSetting = setting === 'ru' || setting === 'en' ? setting : 'auto';
+    document.documentElement.lang = currentLang;
+    document.title = t('appTitle');
+
+    Array.prototype.forEach.call(document.querySelectorAll('[data-i18n]'), function (node) {
+      node.textContent = t(node.getAttribute('data-i18n'));
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-i18n-html]'), function (node) {
+      node.innerHTML = t(node.getAttribute('data-i18n-html'));
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-i18n-placeholder]'), function (node) {
+      node.setAttribute('placeholder', t(node.getAttribute('data-i18n-placeholder')));
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-i18n-aria-label]'), function (node) {
+      node.setAttribute('aria-label', t(node.getAttribute('data-i18n-aria-label')));
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('.lang-card'), function (card) {
+      var active = card.getAttribute('data-lang') === currentLanguageSetting;
+      card.classList.toggle('active', active);
+      card.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
+
+    if (lastBot) renderBot(lastBot);
+    var keyInput = $('yt-key');
+    if (keyInput) $('toggle-key').textContent = keyInput.type === 'password' ? t('toggleShow') : t('toggleHide');
+    var alertsInput = $('alerts-token');
+    if (alertsInput) $('toggle-alerts-token').textContent = alertsInput.type === 'password' ? t('toggleShow') : t('toggleHide');
+    renderTwitchAuth(lastTwitchAuth);
+  }
+
+  async function setLanguageSetting(lang) {
+    var setting = lang === 'ru' || lang === 'en' ? lang : 'auto';
+    var resolved = setting === 'auto'
+      ? ((window.i18n && window.i18n.browserLang) || 'ru')
+      : setting;
+    applyLanguage(resolved, setting);
+    if (!api || !api.setLanguage) return;
+    try {
+      var result = await api.setLanguage(setting);
+      if (result && result.resolved) applyLanguage(result.resolved, result.language);
+      setStatus(t('languageSaved'), 'ok');
+    } catch (error) {
+      setStatus(t('statusSaveFailed') + (error && error.message ? error.message : error), 'err');
+    }
+  }
+
   function setTheme(theme, silent) {
-    if (THEMES.indexOf(theme) === -1) theme = 'classic';
+    theme = normalizeTheme(theme);
     currentTheme = theme;
     Array.prototype.forEach.call(document.querySelectorAll('.theme-card'), function (card) {
       var active = card.getAttribute('data-theme') === theme;
@@ -977,7 +1207,7 @@
       node.textContent = '';
       return;
     }
-    node.textContent = (bot.exists ? 'Чат-бот: ' : 'Чат-бот не найден: ') + bot.file;
+    node.textContent = (bot.exists ? t('botPathFound') : t('botPathMissing')) + bot.file;
     node.style.color = bot.exists ? '' : '#ffb3ae';
   }
 
@@ -998,7 +1228,7 @@
     $('alerts-offline').checked = values.offlineEnabled !== false;
     $('alerts-token').value = values.botToken || '';
     $('alerts-token').type = 'password';
-    $('toggle-alerts-token').textContent = 'Показать';
+    $('toggle-alerts-token').textContent = t('toggleShow');
     $('alerts-chat').value = values.chatId || '';
     $('alerts-thread').value = values.messageThreadId || '';
 
@@ -1006,10 +1236,10 @@
     if (data.envChatId != null) alertsEnv.chatId = data.envChatId === true;
 
     var env = [];
-    if (alertsEnv.token) env.push('токен');
-    if (alertsEnv.chatId) env.push('chat_id');
+    if (alertsEnv.token) env.push(t('alertsEnvToken'));
+    if (alertsEnv.chatId) env.push(t('alertsEnvChat'));
     $('alerts-env').textContent = env.length
-      ? 'Из переменных окружения уже задан ' + env.join(' и ') + '. Поля можно оставить пустыми.'
+      ? t('alertsEnvNote') + env.join(t('alertsEnvAnd')) + t('alertsEnvFields')
       : '';
     setAlertsResult('');
   }
@@ -1029,7 +1259,7 @@
     try {
       fillAlerts(await api.alertsLoad());
     } catch (error) {
-      setAlertsResult('Не удалось прочитать Telegram-настройки: ' +
+      setAlertsResult(t('alertsReadFailed') +
         (error && error.message ? error.message : error), 'err');
     }
   }
@@ -1038,19 +1268,18 @@
     if (!api || !api.alertsTest || alertsBusy) return;
     alertsBusy = true;
     $('alerts-test').disabled = true;
-    setAlertsResult('Отправляю тестовое сообщение…');
+    setAlertsResult(t('alertsSending'));
     try {
       var result = await api.alertsTest(collectAlerts());
       if (!result || result.ok !== true) {
-        setAlertsResult((result && result.error) || 'Telegram не принял сообщение.', 'err');
+        setAlertsResult((result && result.error) || t('alertsNotAccepted'), 'err');
         return;
       }
       var chat = result.chat || {};
       var name = chat.title || (chat.username ? '@' + chat.username : '');
-      setAlertsResult('Готово: сообщение отправлено' + (name ? ' в «' + name + '»' : '') +
-        '. Проверьте Telegram.', 'ok');
+      setAlertsResult(t('alertsTestSuccess') + (name ? t('alertsSentTo') + name + t('alertsCheckTelegram') : '. ' + t('alertsCheckTelegram')), 'ok');
     } catch (error) {
-      setAlertsResult('Не удалось отправить: ' +
+      setAlertsResult(t('alertsTestFailed') + ': ' +
         (error && error.message ? error.message : error), 'err');
     } finally {
       alertsBusy = false;
@@ -1059,22 +1288,25 @@
   }
 
   // --- Встроенный бот: статус и кнопки запуска ---------------------------
-  var lastBot = null;
   var botBusy = false;
   var botPoll = null;
-  var BOT_LABELS = {
-    stopped: 'Остановлен',
-    starting: 'Запускается…',
-    running: 'Работает',
-    external: 'Работает отдельно',
-    stopping: 'Останавливается…',
-    error: 'Ошибка'
+  var BOT_LABEL_KEYS = {
+    stopped: 'botStateStopped',
+    starting: 'botStateStarting',
+    running: 'botStateRunning',
+    external: 'botStateExternal',
+    stopping: 'botStateStopping',
+    error: 'botStateError'
   };
+
+  function botLabel(state) {
+    return t(BOT_LABEL_KEYS[state] || 'botStateError');
+  }
 
   function renderBot(status) {
     if (!status) return;
     lastBot = status;
-    var label = BOT_LABELS[status.state] || status.label || status.state;
+    var label = botLabel(status.state);
     $('bot-state-text').textContent = label + (status.pid ? ' · pid ' + status.pid : '');
     $('bot-dot').className = 'dot bot ' + status.state;
     $('bot-channel').textContent = status.channel ? '#' + status.channel : '—';
@@ -1082,10 +1314,10 @@
     $('bot-error').textContent = status.lastError || '';
     $('bot-error').style.color = status.lastError ? '#ffb3ae' : '';
     $('bot-config-path').textContent =
-      (status.configExists ? 'Файл бота: ' : 'Файл бота не найден: ') + status.configFile;
+      (status.configExists ? t('botFileLabel') : t('botFileMissingLabel')) + status.configFile;
 
     $('bot-open').disabled = botBusy || !(status.state === 'running' || status.state === 'external');
-    $('bot-toggle').textContent = status.canStop ? 'Остановить' : 'Запустить';
+    $('bot-toggle').textContent = status.canStop ? t('botStopBtn') : t('botStartBtn');
     $('bot-toggle').disabled = botBusy || !(status.canStop || status.canStart);
     $('bot-restart').disabled = botBusy || !status.canRestart;
     $('bot-folder').disabled = botBusy;
@@ -1114,9 +1346,9 @@
     botBusy = true;
     if (lastBot) renderBot(lastBot);
     var messages = {
-      start: 'Запускаю бота…',
-      stop: 'Останавливаю бота…',
-      restart: 'Перезапускаю бота…'
+      start: t('botStartingMsg'),
+      stop: t('botStoppingMsg'),
+      restart: t('botRestartingMsg')
     };
     setStatus(messages[action] || '…');
     var promise;
@@ -1127,22 +1359,22 @@
     Promise.resolve(promise).then(function (status) {
       botBusy = false;
       renderBot(status);
-      setStatus('Бот: ' + (BOT_LABELS[status.state] || status.state) + '.',
+      setStatus(t('botStatusPrefix') + botLabel(status.state) + '.',
         status.state === 'error' ? 'err' : 'ok');
     }).catch(function (error) {
       botBusy = false;
       if (lastBot) renderBot(lastBot);
-      setStatus('Не удалось: ' + (error && error.message ? error.message : error), 'err');
+      setStatus(t('botCommandFailed') + (error && error.message ? error.message : error), 'err');
     });
   }
 
   function syncMessage(sync) {
     if (!sync) return '';
-    if (sync.skipped) return 'Синхронизация с чат-ботом выключена.';
-    if (sync.ok && sync.changed) return 'Чат-бот обновлён.';
-    if (sync.ok) return 'В чат-боте уже такие же каналы и ссылки.';
-    if (sync.reason === 'not-found') return 'Чат-бот не найден — синхронизация пропущена.';
-    return 'Синхронизация с чат-ботом не удалась: ' + (sync.message || sync.reason || 'ошибка');
+    if (sync.skipped) return t('syncSkipped');
+    if (sync.ok && sync.changed) return t('syncUpdated');
+    if (sync.ok) return t('syncNoChanges');
+    if (sync.reason === 'not-found') return t('syncNotFound');
+    return t('syncFailed') + (sync.message || sync.reason || t('syncError'));
   }
 
   function splitChannels(value) {
@@ -1175,7 +1407,7 @@
 
   function markDirty() {
     dirty = true;
-    setStatus('Есть несохранённые изменения');
+    setStatus(t('statusDirty'));
   }
 
   function fill(settings) {
@@ -1187,7 +1419,7 @@
     $('yt-video').value = yt.videoId || '';
     $('yt-key').value = yt.apiKey || '';
     $('yt-key').type = 'password';
-    $('toggle-key').textContent = 'Показать';
+    $('toggle-key').textContent = t('toggleShow');
     $('yt-relay').checked = yt.relay !== false;
     $('yt-source').value = yt.source === 'api' ? 'api' : 'auto';
     $('yt-poll').value = Math.round((yt.pollMs || 12000) / 1000);
@@ -1246,9 +1478,10 @@
   async function save() {
     if (!api) return;
     setBusy(true);
-    setStatus('Сохраняю…');
+    setStatus(t('statusSaving'));
     try {
       var alertsSnapshot = collectAlerts();
+      var twitchSnapshot = collectTwitchAuth();
       var result = await api.save(collect());
       fill(result.settings);
 
@@ -1261,35 +1494,50 @@
         }
       }
 
+      var twitchResult = null;
+      if (api.twitchAuthSave) {
+        try {
+          twitchResult = await api.twitchAuthSave(twitchSnapshot);
+          if (twitchResult && twitchResult.ok) renderTwitchAuth(twitchResult);
+        } catch (error) {
+          twitchResult = { ok: false, error: error && error.message ? error.message : String(error) };
+        }
+      }
+
       var syncText = syncMessage(result.sync);
       var botText = '';
-      if (result.botRestarting) botText = ' Бот перезапускается с новым каналом.';
-      else if (result.botExternal) botText = ' Бот запущен отдельно — перезапусти его сам.';
-      else if (result.botAutoStartChanged) botText = ' Автозапуск бота обновлён.';
+      if (result.botRestarting) botText = t('botRestartingChannel');
+      else if (result.botExternal) botText = t('botExternalChannel');
+      else if (result.botAutoStartChanged) botText = t('botAutostartUpdated');
 
       var alertsText = '';
       var kind = result.sync && result.sync.ok === false ? 'err' : 'ok';
       if (alertResult) {
         if (!alertResult.ok) {
-          alertsText = ' Telegram: ' + (alertResult.error || 'не удалось сохранить настройки.');
+          alertsText = ' ' + t('telegramPrefix') + (alertResult.error || t('alertsSaveFailed'));
           kind = 'err';
         } else if (alertResult.changed) {
           if (alertResult.botRestarting) {
-            alertsText = ' Telegram-уведомления сохранены, бот перезапускается.';
+            alertsText = ' ' + t('alertsSaveRestart');
           } else if (alertResult.botExternal) {
-            alertsText = ' Telegram-уведомления сохранены. Бот запущен отдельно — перезапустите его.';
+            alertsText = ' ' + t('alertsSaveExternal');
           } else {
-            alertsText = ' Telegram-уведомления сохранены.';
+            alertsText = ' ' + t('alertsSaveSuccess');
           }
         }
         if (alertResult.ok) fillAlerts(alertResult);
       }
 
-      setStatus('Сохранено. Окно поверх игры обновилось; в OBS обнови источник «Мультичат».' +
+      if (twitchResult && twitchResult.ok === false) {
+        alertsText += ' ' + t('twitchAuthSaveFailed') + (twitchResult.error || '');
+        kind = 'err';
+      }
+
+      setStatus(t('statusSaved') +
         (syncText ? ' ' + syncText : '') + botText + alertsText, kind);
       refreshBot();
     } catch (error) {
-      setStatus('Не удалось сохранить: ' + (error && error.message ? error.message : error), 'err');
+      setStatus(t('statusSaveFailed') + (error && error.message ? error.message : error), 'err');
     } finally {
       setBusy(false);
     }
@@ -1297,29 +1545,185 @@
 
   async function reset() {
     if (!api) return;
-    if (!confirm('Удалить пользовательские настройки и вернуться к значениям из config.js?')) return;
+    if (!confirm(t('confirmReset'))) return;
     setBusy(true);
-    setStatus('Возвращаю настройки из config.js…');
+    setStatus(t('statusResetWorking'));
     try {
       var data = await api.reset();
       fill(data.settings);
       await reloadAlerts();
+      await reloadTwitchAuth();
       showBot(data.bot);
       var resetSyncText = syncMessage(data.sync);
       var resetKind = data.sync && data.sync.ok === false ? 'err' : 'ok';
-      setStatus('Готово: используются настройки из config.js.' +
+      setStatus(t('statusResetDone') +
         (resetSyncText ? ' ' + resetSyncText : ''), resetKind);
     } catch (error) {
-      setStatus('Не удалось сбросить: ' + (error && error.message ? error.message : error), 'err');
+      setStatus(t('statusResetFailed') + (error && error.message ? error.message : error), 'err');
     } finally {
       setBusy(false);
     }
   }
 
   function close() {
-    if (dirty && !confirm('Закрыть без сохранения?')) return;
+    if (dirty && !confirm(t('confirmClose'))) return;
     if (api) api.close();
     else window.close();
+  }
+
+  // --- Twitch-авторизация -------------------------------------------------
+  var twitchPoll = null;
+  var twitchBusy = false;
+
+  function collectTwitchAuth() {
+    return {
+      clientId: $('twitch-client-id').value.trim(),
+      clientSecret: $('twitch-client-secret').value.trim(),
+      botUsername: $('twitch-bot-name').value.trim()
+    };
+  }
+
+  function setTwitchResult(text, kind) {
+    var node = $('twitch-auth-result');
+    node.textContent = text || '';
+    node.style.color = kind === 'ok' ? 'var(--ok)' : (kind === 'err' ? 'var(--err)' : '');
+  }
+
+  function twitchErrorText(code) {
+    var text = String(code == null ? '' : code);
+    if (text === 'expired') return t('twitchAuthExpired');
+    if (text === 'denied') return t('twitchAuthDenied');
+    if (text.indexOf('error:') === 0) return t('twitchAuthLoginFailed') + text.slice(6);
+    return text;
+  }
+
+  function renderTwitchAuth(state) {
+    if (!state) return;
+    lastTwitchAuth = state;
+
+    var clientInput = $('twitch-client-id');
+    var secretInput = $('twitch-client-secret');
+    var nameInput = $('twitch-bot-name');
+    if (document.activeElement !== clientInput && state.clientId != null) clientInput.value = state.clientId;
+    if (document.activeElement !== secretInput && state.clientSecret != null) secretInput.value = state.clientSecret;
+    if (document.activeElement !== nameInput && state.botUsername != null) nameInput.value = state.botUsername;
+
+    var badge = $('twitch-auth-badge');
+    var status = $('twitch-auth-status');
+    var user = $('twitch-auth-user');
+    status.className = 'auth-status';
+
+    if (state.pending) {
+      badge.textContent = t('twitchAuthStatusPending');
+      status.classList.add('pending');
+      user.textContent = '';
+      $('twitch-device-box').hidden = false;
+      $('twitch-device-code').textContent = state.userCode || '—';
+      var uri = state.verificationUri || 'https://www.twitch.tv/activate';
+      $('twitch-device-link').textContent = uri;
+      $('twitch-device-link').href = uri;
+      $('twitch-open-link').hidden = false;
+      $('twitch-login').disabled = true;
+      $('twitch-logout').disabled = false;
+      setTwitchResult(t('twitchAuthDeviceHint'));
+      startTwitchPolling();
+      return;
+    }
+
+    $('twitch-device-box').hidden = true;
+    $('twitch-open-link').hidden = true;
+    $('twitch-login').disabled = twitchBusy;
+    $('twitch-logout').disabled = twitchBusy || !state.hasToken;
+    stopTwitchPolling();
+
+    if (state.authorized) {
+      badge.textContent = t('twitchAuthStatusOk');
+      status.classList.add('ok');
+      user.textContent = t('twitchAuthStatusAs') + (state.login || state.botUsername || '');
+    } else if (state.expired) {
+      badge.textContent = t('twitchAuthStatusExpired');
+      status.classList.add('err');
+      user.textContent = '';
+    } else if (state.error) {
+      badge.textContent = t('twitchAuthStatusError');
+      status.classList.add('err');
+      user.textContent = '';
+      setTwitchResult(twitchErrorText(state.error), 'err');
+    } else {
+      badge.textContent = t('twitchAuthStatusMissing');
+      user.textContent = '';
+    }
+  }
+
+  async function reloadTwitchAuth() {
+    if (!api || !api.twitchAuthStatus) return;
+    try {
+      renderTwitchAuth(await api.twitchAuthStatus());
+    } catch (error) {
+      setTwitchResult(t('twitchAuthLoginFailed') +
+        (error && error.message ? error.message : error), 'err');
+    }
+  }
+
+  function stopTwitchPolling() {
+    if (twitchPoll) {
+      clearInterval(twitchPoll);
+      twitchPoll = null;
+    }
+  }
+
+  function startTwitchPolling() {
+    stopTwitchPolling();
+    twitchPoll = setInterval(function () {
+      if (!api || !api.twitchAuthStatus) return;
+      api.twitchAuthStatus().then(function (state) {
+        renderTwitchAuth(state);
+        if (!state.pending) {
+          stopTwitchPolling();
+          if (state.authorized) setTwitchResult(t('twitchAuthLoginSuccess'), 'ok');
+        }
+      }).catch(function () { /* повторим на следующем тике */ });
+    }, 2000);
+  }
+
+  async function twitchLogin() {
+    if (!api || !api.twitchAuthStart || twitchBusy) return;
+    twitchBusy = true;
+    $('twitch-login').disabled = true;
+    setTwitchResult(t('twitchAuthLoginStarted'));
+    try {
+      var result = await api.twitchAuthStart(collectTwitchAuth());
+      if (!result || result.ok !== true) {
+        var message = result && result.errorKey ? t(result.errorKey) : t('twitchAuthLoginStartFailed');
+        if (result && result.error) message += ' ' + result.error;
+        setTwitchResult(message, 'err');
+        return;
+      }
+      renderTwitchAuth(result);
+    } catch (error) {
+      setTwitchResult(t('twitchAuthLoginFailed') +
+        (error && error.message ? error.message : error), 'err');
+    } finally {
+      twitchBusy = false;
+      if (lastTwitchAuth && !lastTwitchAuth.pending) $('twitch-login').disabled = false;
+    }
+  }
+
+  async function twitchLogout() {
+    if (!api || !api.twitchAuthLogout || twitchBusy) return;
+    twitchBusy = true;
+    $('twitch-logout').disabled = true;
+    try {
+      var state = await api.twitchAuthLogout();
+      renderTwitchAuth(state);
+      setTwitchResult(t('twitchAuthLogoutSuccess'), 'ok');
+    } catch (error) {
+      setTwitchResult(t('twitchAuthLoginFailed') +
+        (error && error.message ? error.message : error), 'err');
+    } finally {
+      twitchBusy = false;
+      $('twitch-logout').disabled = !lastTwitchAuth || !lastTwitchAuth.hasToken;
+    }
   }
 
   function switchTab(name) {
@@ -1331,6 +1735,8 @@
     });
     if (name === 'bot') startBotPolling();
     else stopBotPolling();
+    if (name === 'twitch') reloadTwitchAuth();
+    else stopTwitchPolling();
   }
 
   document.querySelectorAll('.tab').forEach(function (tab) {
@@ -1358,18 +1764,31 @@
     if (api) api.botOpenFolder();
   });
 
+  document.querySelectorAll('.lang-card').forEach(function (card) {
+    card.addEventListener('click', function () {
+      setLanguageSetting(card.getAttribute('data-lang'));
+    });
+  });
+
+  $('twitch-login').addEventListener('click', twitchLogin);
+  $('twitch-logout').addEventListener('click', twitchLogout);
+  $('twitch-open-link').addEventListener('click', function () {
+    var link = $('twitch-device-link');
+    if (link && link.href) window.open(link.href, '_blank');
+  });
+
   $('toggle-key').addEventListener('click', function () {
     var input = $('yt-key');
     var hidden = input.type === 'password';
     input.type = hidden ? 'text' : 'password';
-    this.textContent = hidden ? 'Скрыть' : 'Показать';
+    this.textContent = hidden ? t('toggleHide') : t('toggleShow');
   });
 
   $('toggle-alerts-token').addEventListener('click', function () {
     var input = $('alerts-token');
     var hidden = input.type === 'password';
     input.type = hidden ? 'text' : 'password';
-    this.textContent = hidden ? 'Скрыть' : 'Показать';
+    this.textContent = hidden ? t('toggleHide') : t('toggleShow');
   });
 
   $('alerts-test').addEventListener('click', testAlerts);
@@ -1378,12 +1797,12 @@
     if (api && api.overlayGetUrl) {
       api.overlayGetUrl().then(function (url) {
         navigator.clipboard.writeText(url).then(function () {
-          setStatus('Ссылка скопирована в буфер обмена', 'ok');
+          setStatus(t('obsCopied'), 'ok');
         }).catch(function () {
-          setStatus('Не удалось скопировать', 'err');
+          setStatus(t('obsCopyFailed'), 'err');
         });
       }).catch(function (error) {
-        setStatus('Ошибка: ' + (error && error.message ? error.message : error), 'err');
+        setStatus(t('obsErrorPrefix') + (error && error.message ? error.message : error), 'err');
       });
     }
   });
@@ -1408,24 +1827,31 @@
 
   async function init() {
     if (!api) {
-      setStatus('Нет связи с приложением. Открой настройки из трея «Stream Helper — чат и бот».', 'err');
+      applyLanguage((window.i18n && window.i18n.browserLang) || 'ru', 'auto');
+      setStatus(t('statusNoConnection'), 'err');
       setBusy(true);
       return;
     }
     try {
       var data = await api.load();
+      var language = data.settings.language || 'auto';
+      var resolved = language === 'auto'
+        ? ((window.i18n && window.i18n.browserLang) || 'ru')
+        : language;
+      applyLanguage(resolved, language);
       fill(data.settings);
       await reloadAlerts();
+      await reloadTwitchAuth();
       showBot(data.bot);
       if (data.botProcess) renderBot(data.botProcess);
-      $('settings-path').textContent = 'Файл настроек: ' + data.settingsFile;
+      $('settings-path').textContent = t('settingsFileLabel') + data.settingsFile;
       if (api.overlayGetUrl) {
         var url = await api.overlayGetUrl();
         $('overlay-path').textContent = url;
       }
       setStatus('');
     } catch (error) {
-      setStatus('Не удалось загрузить настройки: ' + (error && error.message ? error.message : error), 'err');
+      setStatus(t('statusSaveFailed') + (error && error.message ? error.message : error), 'err');
     }
   }
 
