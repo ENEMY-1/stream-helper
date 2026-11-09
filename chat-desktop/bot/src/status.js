@@ -6,13 +6,72 @@
 const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
+const os = require('node:os');
 
 const WEB_ROOT = path.join(__dirname, 'web');
 const BODY_LIMIT = 256 * 1024;
 
+// Язык интерфейса берётся из общих настроек оверлея: окно настроек пишет
+// туда «auto», «ru» или «en», а панель бота читает и применяет его сама.
+//
+// Настройки могут лежать в двух местах — так же, как их ищет main.js:
+// сначала папка OBS-оверлея в «Документах» (если она установлена), иначе
+// chat-overlay рядом с приложением. Если смотреть только во вторую, панель
+// не увидит смену языка у тех, кто держит оверлей в «Документах».
+function settingsCandidates() {
+  const home = process.env.USERPROFILE || os.homedir() || '';
+  return [
+    {
+      marker: path.join(home, 'Documents', 'obs-overlays', 'chat', 'overlay.html'),
+      file: path.join(home, 'Documents', 'obs-overlays', 'chat', 'overlay-settings.js')
+    },
+    {
+      marker: path.join(__dirname, '..', '..', '..', 'chat-overlay', 'overlay.html'),
+      file: path.join(__dirname, '..', '..', '..', 'chat-overlay', 'overlay-settings.js')
+    }
+  ];
+}
+
+function settingsFile() {
+  const candidates = settingsCandidates();
+  for (let i = 0; i < candidates.length; i += 1) {
+    try {
+      if (fs.existsSync(candidates[i].marker)) return candidates[i].file;
+    } catch (error) { /* ignore */ }
+  }
+  return candidates[1].file;
+}
+
+function readLanguageSetting() {
+  try {
+    const text = fs.readFileSync(settingsFile(), 'utf8');
+    const match = text.match(/["']language["']\s*:\s*["']([^"']+)["']/);
+    const value = match ? String(match[1]).toLowerCase() : 'auto';
+    return value === 'ru' || value === 'en' ? value : 'auto';
+  } catch (error) {
+    return 'auto';
+  }
+}
+
+function systemLanguage() {
+  try {
+    const locale = Intl.DateTimeFormat().resolvedOptions().locale || '';
+    return String(locale).toLowerCase().indexOf('ru') === 0 ? 'ru' : 'en';
+  } catch (error) {
+    return 'ru';
+  }
+}
+
+function resolvePanelLanguage() {
+  const setting = readLanguageSetting();
+  if (setting === 'ru' || setting === 'en') return setting;
+  return systemLanguage();
+}
+
 const ASSETS = {
   '/': { file: 'index.html', type: 'text/html; charset=utf-8', html: true },
   '/index.html': { file: 'index.html', type: 'text/html; charset=utf-8', html: true },
+  '/assets/i18n.js': { file: 'i18n.js', type: 'text/javascript; charset=utf-8' },
   '/assets/app.js': { file: 'app.js', type: 'text/javascript; charset=utf-8' },
   '/assets/styles.css': { file: 'styles.css', type: 'text/css; charset=utf-8' },
   '/favicon.svg': { file: 'favicon.svg', type: 'image/svg+xml' }
@@ -130,7 +189,7 @@ async function handle(request, response, options) {
       return;
     }
     try {
-      sendJson(response, 200, options.getSnapshot());
+      sendJson(response, 200, Object.assign({ language: resolvePanelLanguage() }, options.getSnapshot()));
     } catch (error) {
       sendJson(response, 500, { ok: false, error: error.message });
     }
@@ -139,6 +198,15 @@ async function handle(request, response, options) {
 
   if (url.pathname === '/health') {
     sendJson(response, 200, { ok: true, pid: process.pid });
+    return;
+  }
+
+  if (url.pathname === '/api/language') {
+    sendJson(response, 200, {
+      ok: true,
+      setting: readLanguageSetting(),
+      language: resolvePanelLanguage()
+    });
     return;
   }
 
@@ -170,7 +238,7 @@ async function handle(request, response, options) {
       sendJson(response, 503, { ok: false, error: 'Редактор сейчас недоступен' });
       return;
     }
-    sendJson(response, 200, Object.assign({ ok: true }, options.panel.getData()));
+    sendJson(response, 200, Object.assign({ ok: true, language: resolvePanelLanguage() }, options.panel.getData()));
     return;
   }
 
@@ -251,6 +319,18 @@ async function handle(request, response, options) {
       response.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
       response.end('Файл панели не найден: ' + asset.file);
       return;
+    }
+    if (asset.html) {
+      // Язык подставляется в HTML сразу, чтобы панель не мигала русским
+      // текстом перед первой загрузкой app.js.
+      const lang = resolvePanelLanguage();
+      content = Buffer.from(
+        content.toString('utf8').replace(
+          /<html lang="[^"]*" data-lang="[^"]*">/,
+          '<html lang="' + lang + '" data-lang="' + lang + '">'
+        ),
+        'utf8'
+      );
     }
     response.writeHead(200, securityHeaders(asset.type, asset.html));
     response.end(content);

@@ -67,8 +67,15 @@ const VAR_LIST = [
   '{twitch}', '{youtube}', '{discord}', '{date}', '{time}'
 ];
 
+// Каждая русская строка интерфейса проходит через t(): словарь лежит в
+// i18n.js, а для русского языка возвращается исходный текст.
+function t(text) {
+  return typeof window !== 'undefined' && window.panelT ? window.panelT(text) : text;
+}
+
 const state = {
   view: 'overview',
+  lang: 'ru',
   panel: null,
   status: null,
   loading: true,
@@ -190,7 +197,7 @@ function api(path, options) {
   })).then(function (response) {
     return response.json().catch(function () { return null; }).then(function (data) {
       if (!response.ok || !data || data.ok === false) {
-        const error = new Error((data && data.error) || ('Ошибка ' + response.status));
+        const error = new Error((data && data.error) || (t('Ошибка ') + response.status));
         error.fields = (data && data.fields) || {};
         error.status = response.status;
         throw error;
@@ -217,12 +224,12 @@ function toast(message, type) {
 
 function formatNext(seconds) {
   const sec = Math.max(0, Number(seconds) || 0);
-  if (sec < 60) return 'через ' + sec + ' с';
+  if (sec < 60) return t('через ') + sec + t(' с');
   const min = Math.round(sec / 60);
-  if (min < 60) return 'через ' + min + ' мин';
+  if (min < 60) return t('через ') + min + t(' мин');
   const hours = Math.floor(min / 60);
   const rest = min % 60;
-  return 'через ' + hours + ' ч' + (rest ? ' ' + rest + ' мин' : '');
+  return t('через ') + hours + t(' ч') + (rest ? ' ' + rest + t(' мин') : '');
 }
 
 function socialsLine(socials) {
@@ -238,17 +245,18 @@ function renderVars(text) {
   const socials = state.linksDraft || (state.panel && state.panel.socials) || {};
   const labels = (state.panel && state.panel.meta && state.panel.meta.socialLabels) || {};
   const channel = (state.panel && state.panel.meta && state.panel.meta.channel) || 'your_channel';
+  const locale = state.lang === 'en' ? 'en-US' : 'ru-RU';
   const values = {
-    user: 'Аня',
+    user: t('Аня'),
     channel: channel,
     platform: 'twitch',
-    uptime: '2 ч 14 мин',
+    uptime: t('2 ч 14 мин'),
     socials: socialsLine(socials),
     youtube: socials.youtube || '',
     twitch: socials.twitch || '',
     discord: socials.discord || '',
-    date: new Date().toLocaleDateString('ru-RU'),
-    time: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
+    date: new Date().toLocaleDateString(locale),
+    time: new Date().toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })
   };
   return String(text == null ? '' : text).replace(/\{([a-zа-яё_]+)\}/gi, function (match, key) {
     const value = values[key.toLowerCase()];
@@ -263,6 +271,10 @@ async function loadPanel(options) {
   try {
     const data = await api('/api/panel');
     state.panel = data;
+    if (data.language && data.language !== state.lang) {
+      state.lang = data.language === 'en' ? 'en' : 'ru';
+      if (window.panelSetLang) window.panelSetLang(state.lang);
+    }
     if (!state.linksDirty) state.linksDraft = copy(data.socials);
     if (!state.modDirty) state.modDraft = copy(data.moderation || {});
     if (!state.funDirty) {
@@ -283,7 +295,7 @@ async function loadPanel(options) {
       state.loading = false;
       render();
     }
-    if (!silent) toast('Не удалось загрузить настройки: ' + error.message, 'error');
+    if (!silent) toast(t('Не удалось загрузить настройки: ') + error.message, 'error');
     return false;
   }
 }
@@ -292,8 +304,18 @@ async function refreshStatus() {
   try {
     const response = await fetch('/status', { cache: 'no-store' });
     if (!response.ok) throw new Error('HTTP ' + response.status);
-    state.status = await response.json();
+    const data = await response.json();
+    const nextLang = data.language === 'en' ? 'en' : (data.language === 'ru' ? 'ru' : state.lang);
+    const langChanged = nextLang !== state.lang;
+    state.status = data;
     state.statusError = false;
+    if (langChanged) {
+      state.lang = nextLang;
+      if (window.panelSetLang) window.panelSetLang(state.lang);
+      render();
+      updateSidebar();
+      return;
+    }
   } catch (error) {
     state.statusError = true;
   }
@@ -314,7 +336,7 @@ async function refreshStatus() {
 
 async function refreshAll() {
   const [ok] = await Promise.all([loadPanel({ silent: true }), refreshStatus()]);
-  if (ok) toast('Данные обновлены', 'ok');
+  if (ok) toast(t('Данные обновлены'), 'ok');
 }
 
 function updateSidebar() {
@@ -324,30 +346,30 @@ function updateSidebar() {
   const s = state.status;
 
   let cls = 'status-dot';
-  let text = 'Нет связи';
+  let text = t('Нет связи');
   let chan = state.panel ? '#' + state.panel.meta.channel : 'Twitch';
 
   if (state.statusError) {
     cls += ' bad';
   } else if (!s) {
     cls += ' warn';
-    text = 'Подключение…';
+    text = t('Подключение…');
   } else {
     chan = '#' + (s.twitch.channel || '—');
     if (s.twitch.status === 'online') {
       if (s.twitch.readOnly) {
         cls += ' warn';
-        text = 'Только чтение';
+        text = t('Только чтение');
       } else {
         cls += ' ok';
-        text = 'Бот на связи';
+        text = t('Бот на связи');
       }
     } else if (s.twitch.status === 'connecting') {
       cls += ' warn';
-      text = 'Подключается…';
+      text = t('Подключается…');
     } else {
       cls += ' bad';
-      text = 'Не подключён';
+      text = t('Не подключён');
     }
   }
 
@@ -372,12 +394,12 @@ function currentView() {
 
 function render() {
   const meta = VIEWS[state.view];
-  document.getElementById('page-title').textContent = meta.title;
-  document.getElementById('page-eyebrow').textContent = meta.eyebrow;
+  document.getElementById('page-title').textContent = t(meta.title);
+  document.getElementById('page-eyebrow').textContent = t(meta.eyebrow);
   document.getElementById('page-sub').textContent = state.view === 'links' && state.linksDirty
-    ? 'Есть несохранённые изменения'
-    : meta.sub;
-  document.title = 'Stream Helper · ' + meta.title;
+    ? t('Есть несохранённые изменения')
+    : t(meta.sub);
+  document.title = 'Stream Helper · ' + t(meta.title);
 
   document.querySelectorAll('.nav-item').forEach(function (item) {
     item.classList.toggle('active', item.dataset.view === state.view);
@@ -413,27 +435,27 @@ function render() {
 function renderTopbar() {
   const root = clear(document.getElementById('topbar-actions'));
   if (state.view === 'overview' || state.view === 'commands') {
-    root.appendChild(button('Новая команда', 'plus', 'primary', function () { openCommandDrawer(null); }));
+    root.appendChild(button(t('Новая команда'), 'plus', 'primary', function () { openCommandDrawer(null); }));
   } else if (state.view === 'timers') {
-    root.appendChild(button('Новое автосообщение', 'plus', 'primary', function () { openTimerDrawer(null); }));
+    root.appendChild(button(t('Новое автосообщение'), 'plus', 'primary', function () { openTimerDrawer(null); }));
   } else if (state.view === 'links') {
-    const reset = button('Сбросить', 'reset', 'ghost', resetLinks);
+    const reset = button(t('Сбросить'), 'reset', 'ghost', resetLinks);
     reset.disabled = !state.linksDirty;
-    const save = button('Сохранить', 'save', 'primary', saveLinks);
+    const save = button(t('Сохранить'), 'save', 'primary', saveLinks);
     save.disabled = !state.linksDirty || state.saving;
     root.appendChild(reset);
     root.appendChild(save);
   } else if (state.view === 'moderation') {
-    const reset = button('Сбросить', 'reset', 'ghost', resetModeration);
+    const reset = button(t('Сбросить'), 'reset', 'ghost', resetModeration);
     reset.disabled = !state.modDirty;
-    const save = button('Сохранить', 'save', 'primary', saveModerationSettings);
+    const save = button(t('Сохранить'), 'save', 'primary', saveModerationSettings);
     save.disabled = !state.modDirty || state.saving;
     root.appendChild(reset);
     root.appendChild(save);
   } else if (state.view === 'fun') {
-    const reset = button('Сбросить', 'reset', 'ghost', resetFun);
+    const reset = button(t('Сбросить'), 'reset', 'ghost', resetFun);
     reset.disabled = !state.funDirty;
-    const save = button('Сохранить', 'save', 'primary', saveFunSettings);
+    const save = button(t('Сохранить'), 'save', 'primary', saveFunSettings);
     save.disabled = !state.funDirty || state.saving;
     root.appendChild(reset);
     root.appendChild(save);
@@ -442,8 +464,8 @@ function renderTopbar() {
   const refresh = el('button', {
     class: 'btn ghost',
     type: 'button',
-    title: 'Обновить данные',
-    'aria-label': 'Обновить данные',
+    title: t('Обновить данные'),
+    'aria-label': t('Обновить данные'),
     onClick: refreshAll
   }, icon('refresh', 16));
   root.appendChild(refresh);
@@ -471,10 +493,10 @@ function renderLoadError() {
   return el('div', { class: 'error-card' },
     icon('alert', 20),
     el('div', null,
-      el('h3', { text: 'Не удалось загрузить настройки' }),
-      el('p', { text: state.loadError || 'Проверь, что бот запущен, и обнови страницу.' }),
+      el('h3', { text: t('Не удалось загрузить настройки') }),
+      el('p', { text: state.loadError || t('Проверь, что бот запущен, и обнови страницу.') }),
       el('div', { class: 'quick-actions', style: { marginTop: '12px' } },
-        button('Попробовать снова', 'refresh', 'small', function () { state.loading = true; render(); loadPanel(); })
+        button(t('Попробовать снова'), 'refresh', 'small', function () { state.loading = true; render(); loadPanel(); })
       )
     )
   );
@@ -495,11 +517,11 @@ function renderOverview() {
   const online = tw.status === 'online';
   const orbState = online ? (tw.readOnly ? 'warn' : '') : (tw.status === 'connecting' ? 'warn' : 'bad');
   const heading = online
-    ? (tw.readOnly ? 'Бот читает чат' : 'Бот на связи')
-    : (tw.status === 'connecting' ? 'Подключаюсь…' : 'Нет подключения');
+    ? (tw.readOnly ? t('Бот читает чат') : t('Бот на связи'))
+    : (tw.status === 'connecting' ? t('Подключаюсь…') : t('Нет подключения'));
   const subheading = online
-    ? 'Пишет в #' + (tw.channel || '—') + (tw.bot ? ' под @' + tw.bot : ' анонимно')
-    : 'Проверь окно бота и вход в Twitch';
+    ? t('Пишет в #') + (tw.channel || '—') + (tw.bot ? t(' под @') + tw.bot : t(' анонимно'))
+    : t('Проверь окно бота и вход в Twitch');
 
   const hero = el('section', { class: 'hero' },
     el('div', { class: 'hero-main' },
@@ -513,7 +535,7 @@ function renderOverview() {
     el('div', { class: 'hero-side' },
       el('span', { class: 'chip ' + (online && !tw.readOnly ? 'ok' : 'warn') },
         icon(online ? 'check' : 'alert', 12),
-        el('span', { text: online ? (tw.readOnly ? 'Без отправки' : 'Отправка включена') : 'Ожидание' })
+        el('span', { text: online ? (tw.readOnly ? t('Без отправки') : t('Отправка включена')) : t('Ожидание') })
       ),
       el('span', { class: 'chip accent', text: 'uptime ' + (s.uptimeText || '—') }),
       el('a', {
@@ -521,16 +543,16 @@ function renderOverview() {
         href: 'https://twitch.tv/' + (tw.channel || (p && p.meta.channel) || ''),
         target: '_blank',
         rel: 'noopener'
-      }, el('span', { text: 'Открыть канал' }), icon('external', 15))
+      }, el('span', { text: t('Открыть канал') }), icon('external', 15))
     )
   );
   wrap.appendChild(hero);
 
   const stats = el('div', { class: 'stats' },
-    statCard('Принято сообщений', s.counters.messages || 0, 'chat', '#90b9ff', 'rgba(88, 140, 255, 0.13)', 'rgba(88, 140, 255, 0.16)'),
-    statCard('Ответов бота', s.counters.replies || 0, 'reply', '#93edb9', 'rgba(69, 212, 131, 0.13)', 'rgba(69, 212, 131, 0.16)'),
-    statCard('Аптайм', s.uptimeText || '—', 'clock', '#ffd27a', 'rgba(255, 176, 32, 0.12)', 'rgba(255, 176, 32, 0.14)'),
-    statCard('Своих команд', p ? p.commands.length : 0, 'commands', '#cbb4ff', 'rgba(169, 112, 255, 0.14)', 'rgba(169, 112, 255, 0.17)')
+    statCard(t('Принято сообщений'), s.counters.messages || 0, 'chat', '#90b9ff', 'rgba(88, 140, 255, 0.13)', 'rgba(88, 140, 255, 0.16)'),
+    statCard(t('Ответов бота'), s.counters.replies || 0, 'reply', '#93edb9', 'rgba(69, 212, 131, 0.13)', 'rgba(69, 212, 131, 0.16)'),
+    statCard(t('Аптайм'), s.uptimeText || '—', 'clock', '#ffd27a', 'rgba(255, 176, 32, 0.12)', 'rgba(255, 176, 32, 0.14)'),
+    statCard(t('Своих команд'), p ? p.commands.length : 0, 'commands', '#cbb4ff', 'rgba(169, 112, 255, 0.14)', 'rgba(169, 112, 255, 0.17)')
   );
   wrap.appendChild(stats);
 
@@ -541,7 +563,7 @@ function renderOverview() {
       el('span', { class: 'feed-time', text: item.time || '' }),
       el('div', { class: 'feed-body' },
         el('div', { class: 'feed-meta' },
-          el('span', { class: 'feed-dir ' + (item.dir === 'out' ? 'out' : 'in'), text: item.dir === 'out' ? 'бот' : 'чат' }),
+          el('span', { class: 'feed-dir ' + (item.dir === 'out' ? 'out' : 'in'), text: item.dir === 'out' ? t('бот') : t('чат') }),
           el('span', { class: 'feed-user', text: item.user || '—' })
         ),
         el('div', { class: 'feed-text', text: item.text || '' })
@@ -552,16 +574,16 @@ function renderOverview() {
   if (!feedRows.length) {
     feedRows.push(el('div', { class: 'empty', style: { minHeight: '220px' } },
       el('span', { class: 'empty-icon' }, icon('chat', 23)),
-      el('h3', { text: 'Пока тихо' }),
-      el('p', { text: 'Как только в чате появятся сообщения, они будут здесь.' })
+      el('h3', { text: t('Пока тихо') }),
+      el('p', { text: t('Как только в чате появятся сообщения, они будут здесь.') })
     ));
   }
 
   const feedCard = el('section', { class: 'card' },
     el('div', { class: 'card-head' },
       el('div', null,
-        el('h2', { class: 'card-title', text: 'Последние сообщения' }),
-        el('p', { class: 'card-sub', text: 'Входящие из чата и ответы бота' })
+        el('h2', { class: 'card-title', text: t('Последние сообщения') }),
+        el('p', { class: 'card-sub', text: t('Входящие из чата и ответы бота') })
       ),
       el('span', { class: 'chip mono', text: 'live' })
     ),
@@ -578,35 +600,35 @@ function renderOverview() {
     );
   });
   if (!timerRows.length) {
-    timerRows.push(el('div', { class: 'card-sub', style: { padding: '6px 0 10px' }, text: 'Активных автосообщений нет.' }));
+    timerRows.push(el('div', { class: 'card-sub', style: { padding: '6px 0 10px' }, text: t('Активных автосообщений нет.') }));
   }
 
   const timersCard = el('section', { class: 'card' },
     el('div', { class: 'card-head' },
-      el('h2', { class: 'card-title', text: 'Автосообщения' }),
-      el('span', { class: 'chip', text: (s.timers || []).length + ' активных' })
+      el('h2', { class: 'card-title', text: t('Автосообщения') }),
+      el('span', { class: 'chip', text: (s.timers || []).length + t(' активных') })
     ),
     el('div', { class: 'mini-list' }, timerRows),
     el('div', { class: 'quick-actions' },
-      quickAction('Настроить расписание', 'timers', '#timers'),
-      quickAction('Редактор команд', 'commands', '#commands')
+      quickAction(t('Настроить расписание'), 'timers', '#timers'),
+      quickAction(t('Редактор команд'), 'commands', '#commands')
     )
   );
   side.appendChild(timersCard);
 
   const infoCard = el('section', { class: 'card' },
     el('div', { class: 'card-head' },
-      el('h2', { class: 'card-title', text: 'Подключение' })
+      el('h2', { class: 'card-title', text: t('Подключение') })
     ),
     el('div', { class: 'info-list' },
-      infoRow('Канал', '#' + (tw.channel || '—')),
-      infoRow('Аккаунт', tw.bot ? '@' + tw.bot : 'анонимно'),
-      infoRow('Отправка', tw.readOnly ? 'только чтение' : 'включена'),
-      infoRow('Своих команд', p ? p.commands.length : '—'),
-      infoRow('Автосообщений', p ? p.timers.length : '—')
+      infoRow(t('Канал'), '#' + (tw.channel || '—')),
+      infoRow(t('Аккаунт'), tw.bot ? '@' + tw.bot : t('анонимно')),
+      infoRow(t('Отправка'), tw.readOnly ? t('только чтение') : t('включена')),
+      infoRow(t('Своих команд'), p ? p.commands.length : '—'),
+      infoRow(t('Автосообщений'), p ? p.timers.length : '—')
     ),
     el('div', { class: 'quick-actions' },
-      quickAction('Изменить ссылки', 'links', '#links')
+      quickAction(t('Изменить ссылки'), 'links', '#links')
     )
   );
   side.appendChild(infoCard);
@@ -648,8 +670,8 @@ function renderCommandsView() {
 
   const searchInput = el('input', {
     type: 'search',
-    placeholder: 'Поиск по имени, алиасу или тексту…',
-    'aria-label': 'Поиск команд',
+    placeholder: t('Поиск по имени, алиасу или тексту…'),
+    'aria-label': t('Поиск команд'),
     value: state.search
   });
   searchInput.addEventListener('input', function () {
@@ -658,9 +680,9 @@ function renderCommandsView() {
   });
 
   const filters = el('div', { class: 'filters' },
-    filterButton('all', 'Все'),
-    filterButton('on', 'Включённые'),
-    filterButton('off', 'Выключенные')
+    filterButton('all', t('Все')),
+    filterButton('on', t('Включённые')),
+    filterButton('off', t('Выключенные'))
   );
 
   const toolbar = el('div', { class: 'toolbar' },
@@ -669,7 +691,7 @@ function renderCommandsView() {
     ),
     el('div', { class: 'toolbar-right' },
       filters,
-      button('Добавить', 'plus', 'small', function () { openCommandDrawer(null); })
+      button(t('Добавить'), 'plus', 'small', function () { openCommandDrawer(null); })
     )
   );
   wrap.appendChild(toolbar);
@@ -692,20 +714,20 @@ function renderCommandsView() {
     const summary = el('div', { class: 'list-summary' },
       el('span', {
         text: items.length === p.commands.length
-          ? 'Всего ' + p.commands.length + ' ' + plural(p.commands.length, 'команда', 'команды', 'команд')
-          : 'Показано ' + items.length + ' из ' + p.commands.length
+          ? t('Всего ') + p.commands.length + ' ' + plural(p.commands.length, t('команда'), t('команды'), t('команд'))
+          : t('Показано ') + items.length + t(' из ') + p.commands.length
       }),
-      el('span', { text: 'Изменения применяются сразу' })
+      el('span', { text: t('Изменения применяются сразу') })
     );
     listMount.appendChild(summary);
 
     if (!items.length) {
       listMount.appendChild(el('div', { class: 'empty' },
         el('span', { class: 'empty-icon' }, icon(query ? 'search' : 'commands', 23)),
-        el('h3', { text: query ? 'Ничего не найдено' : (p.commands.length ? 'Все команды скрыты фильтром' : 'Пока нет своих команд') }),
-        el('p', { text: query ? 'Попробуй другое название или очисти поиск.' : 'Добавь первую команду — бот сразу начнёт на неё отвечать.' }),
+        el('h3', { text: query ? t('Ничего не найдено') : (p.commands.length ? t('Все команды скрыты фильтром') : t('Пока нет своих команд')) }),
+        el('p', { text: query ? t('Попробуй другое название или очисти поиск.') : t('Добавь первую команду — бот сразу начнёт на неё отвечать.') }),
         el('div', { class: 'quick-actions', style: { width: '100%', maxWidth: '240px' } },
-          button(query ? 'Очистить поиск' : 'Создать команду', query ? 'reset' : 'plus', 'primary small', function () {
+          button(query ? t('Очистить поиск') : t('Создать команду'), query ? 'reset' : 'plus', 'primary small', function () {
             if (query) {
               state.search = '';
               searchInput.value = '';
@@ -723,9 +745,9 @@ function renderCommandsView() {
     }
 
     clear(filters);
-    filters.appendChild(filterButton('all', 'Все'));
-    filters.appendChild(filterButton('on', 'Включённые'));
-    filters.appendChild(filterButton('off', 'Выключенные'));
+    filters.appendChild(filterButton('all', t('Все')));
+    filters.appendChild(filterButton('on', t('Включённые')));
+    filters.appendChild(filterButton('off', t('Выключенные')));
   }
 
   function filterButton(value, label) {
@@ -780,10 +802,10 @@ function commandCard(command, index) {
     chips.push(el('span', { class: 'chip', text: '+' + (aliases.length - visibleAliases.length) }));
   }
   if (command.permission && command.permission !== 'everyone') {
-    chips.push(el('span', { class: 'chip accent', text: command.permission === 'mod' ? 'модераторы' : 'стример' }));
+    chips.push(el('span', { class: 'chip accent', text: command.permission === 'mod' ? t('модераторы') : t('стример') }));
   }
   if (command.cooldownMs) {
-    chips.push(el('span', { class: 'chip', text: Math.round(command.cooldownMs / 1000) + ' с' }));
+    chips.push(el('span', { class: 'chip', text: Math.round(command.cooldownMs / 1000) + t(' с') }));
   }
   (command.platforms || ['twitch']).forEach(function (platform) {
     chips.push(el('span', {
@@ -792,9 +814,9 @@ function commandCard(command, index) {
     }));
   });
 
-  const duplicateBtn = iconButton('copy', 'Дублировать', 'duplicate');
+  const duplicateBtn = iconButton('copy', t('Дублировать'), 'duplicate');
   duplicateBtn.dataset.index = String(index);
-  const deleteBtn = iconButton('trash', 'Удалить', 'delete', 'danger');
+  const deleteBtn = iconButton('trash', t('Удалить'), 'delete', 'danger');
   deleteBtn.dataset.index = String(index);
 
   return el('article', {
@@ -809,12 +831,12 @@ function commandCard(command, index) {
       el('div', { class: 'cmd-actions' },
         duplicateBtn,
         deleteBtn,
-        el('label', { class: 'switch', title: enabled ? 'Выключить команду' : 'Включить команду' },
+        el('label', { class: 'switch', title: enabled ? t('Выключить команду') : t('Включить команду') },
           el('input', {
             type: 'checkbox',
             checked: enabled,
             dataset: { toggleCommand: '1', index: String(index) },
-            'aria-label': (enabled ? 'Выключить' : 'Включить') + ' команду !' + command.name
+            'aria-label': (enabled ? t('Выключить') : t('Включить')) + t(' команду !') + command.name
           }),
           el('span', { class: 'track' })
         )
@@ -823,12 +845,12 @@ function commandCard(command, index) {
     el('p', { class: 'cmd-reply', text: command.reply || '' }),
     el('div', { class: 'cmd-chips' }, chips),
     el('div', { class: 'cmd-foot' },
-      el('span', { class: 'cmd-length', text: (command.reply || '').length + ' / 480 символов' }),
+      el('span', { class: 'cmd-length', text: (command.reply || '').length + t(' / 480 символов') }),
       el('button', {
         class: 'link-btn',
         type: 'button',
         dataset: { action: 'edit', index: String(index) }
-      }, el('span', { text: 'Редактировать' }), icon('arrow', 14))
+      }, el('span', { text: t('Редактировать') }), icon('arrow', 14))
     )
   );
 }
@@ -847,7 +869,7 @@ function renderBuiltins() {
   return el('details', { class: 'builtins card' },
     el('summary', null,
       icon('lock', 16),
-      el('span', { text: 'Встроенные команды' }),
+      el('span', { text: t('Встроенные команды') }),
       el('span', { class: 'chip', text: String(builtins.length) }),
       el('span', { class: 'chevron', html: ICONS.chevron })
     ),
@@ -860,7 +882,7 @@ async function toggleCommand(index, enabled) {
   const next = copy(state.panel.commands);
   if (!next[index]) return;
   next[index].enabled = enabled;
-  await saveCommandList(next, enabled ? 'Команда включена' : 'Команда выключена');
+  await saveCommandList(next, enabled ? t('Команда включена') : t('Команда выключена'));
 }
 
 async function duplicateCommand(index) {
@@ -888,20 +910,20 @@ async function duplicateCommand(index) {
     platforms: source.platforms || ['twitch'],
     enabled: false
   });
-  await saveCommandList(next, 'Копия «!' + name + '» создана и выключена');
+  await saveCommandList(next, t('Копия «!') + name + t('» создана и выключена'));
 }
 
 function askDeleteCommand(index) {
   const command = state.panel.commands[index];
   if (!command) return;
   confirmDialog(
-    'Удалить команду?',
-    'Команда «!' + command.name + '» исчезнет из config.js. Это можно отменить только вручную.',
-    'Удалить',
+    t('Удалить команду?'),
+    t('Команда «!') + command.name + t('» исчезнет из config.js. Это можно отменить только вручную.'),
+    t('Удалить'),
     function () {
       const next = copy(state.panel.commands);
       next.splice(index, 1);
-      saveCommandList(next, 'Команда !' + command.name + ' удалена');
+      saveCommandList(next, t('Команда !') + command.name + t(' удалена'));
     }
   );
 }
@@ -915,7 +937,7 @@ async function saveCommandList(next, message) {
       body: JSON.stringify({ commands: next })
     });
     state.panel.commands = data.commands;
-    toast(message || 'Команды сохранены', 'ok');
+    toast(message || t('Команды сохранены'), 'ok');
     render();
     refreshStatus();
   } catch (error) {
@@ -976,7 +998,7 @@ function renderCommandDrawer() {
   const counter = el('span', { class: 'counter' });
 
   function updatePreview() {
-    previewText.textContent = renderVars(draft.reply || 'Здесь появится ответ бота');
+    previewText.textContent = renderVars(draft.reply || t('Здесь появится ответ бота'));
     const limit = currentReplyLimit(draft.platforms);
     counter.textContent = draft.reply.length + ' / ' + limit;
     counter.classList.toggle('over', draft.reply.length > limit);
@@ -1016,12 +1038,12 @@ function renderCommandDrawer() {
   });
 
   const nameBlock = el('div', { class: 'form-section' },
-    el('label', { class: 'form-label', for: 'cmd-name' }, el('span', { text: 'Имя команды' })),
+    el('label', { class: 'form-label', for: 'cmd-name' }, el('span', { text: t('Имя команды') })),
     el('div', { class: 'input-wrap' },
       el('span', { class: 'input-prefix', text: '!' }),
       nameInput
     ),
-    el('p', { class: 'form-hint', text: 'Латиница или кириллица, цифры, _ и -. До 32 символов.' }),
+    el('p', { class: 'form-hint', text: t('Латиница или кириллица, цифры, _ и -. До 32 символов.') }),
     el('p', { class: 'field-error', dataset: { error: 'name' } })
   );
 
@@ -1029,10 +1051,10 @@ function renderCommandDrawer() {
   const tagInput = el('div', { class: 'tag-input', id: 'cmd-aliases' });
   const aliasInput = el('input', {
     class: 'tag-field',
-    placeholder: 'алиас + Enter',
+    placeholder: t('алиас + Enter'),
     maxlength: '32',
     autocomplete: 'off',
-    'aria-label': 'Добавить алиас'
+    'aria-label': t('Добавить алиас')
   });
 
   function paintAliases() {
@@ -1040,7 +1062,7 @@ function renderCommandDrawer() {
     draft.aliases.forEach(function (alias, index) {
       const remove = el('button', {
         type: 'button',
-        'aria-label': 'Убрать алиас ' + alias,
+        'aria-label': t('Убрать алиас ') + alias,
         onClick: function () {
           draft.aliases.splice(index, 1);
           paintAliases();
@@ -1058,7 +1080,7 @@ function renderCommandDrawer() {
     if (!alias) return;
     if (draft.aliases.indexOf(alias) !== -1) return;
     if (draft.aliases.length >= meta.maxAliases) {
-      fieldError('aliases', 'Максимум ' + meta.maxAliases + ' алиасов');
+      fieldError('aliases', t('Максимум ') + meta.maxAliases + t(' алиасов'));
       return;
     }
     draft.aliases.push(alias);
@@ -1081,9 +1103,9 @@ function renderCommandDrawer() {
   paintAliases();
 
   const aliasesBlock = el('div', { class: 'form-section' },
-    el('label', { class: 'form-label' }, el('span', { text: 'Алиасы' }), el('span', { class: 'counter', text: 'до ' + meta.maxAliases })),
+    el('label', { class: 'form-label' }, el('span', { text: t('Алиасы') }), el('span', { class: 'counter', text: t('до ') + meta.maxAliases })),
     tagInput,
-    el('p', { class: 'form-hint', text: 'Например: дс, дискорд. Enter или запятая — добавить.' }),
+    el('p', { class: 'form-hint', text: t('Например: дс, дискорд. Enter или запятая — добавить.') }),
     el('p', { class: 'field-error', dataset: { error: 'aliases' } })
   );
 
@@ -1092,7 +1114,7 @@ function renderCommandDrawer() {
     class: 'input',
     id: 'cmd-reply',
     rows: '4',
-    placeholder: 'Привет, {user}! Заходи в Discord: {discord}'
+    placeholder: t('Привет, {user}! Заходи в Discord: {discord}')
   });
   replyInput.value = draft.reply;
   replyInput.addEventListener('input', function () {
@@ -1107,7 +1129,7 @@ function renderCommandDrawer() {
       class: 'var-chip',
       type: 'button',
       text: variable,
-      title: 'Вставить ' + variable,
+      title: t('Вставить ') + variable,
       onClick: function () {
         const start = replyInput.selectionStart == null ? replyInput.value.length : replyInput.selectionStart;
         const end = replyInput.selectionEnd == null ? start : replyInput.selectionEnd;
@@ -1119,13 +1141,13 @@ function renderCommandDrawer() {
   });
 
   const replyBlock = el('div', { class: 'form-section' },
-    el('label', { class: 'form-label', for: 'cmd-reply' }, el('span', { text: 'Ответ бота' }), counter),
+    el('label', { class: 'form-label', for: 'cmd-reply' }, el('span', { text: t('Ответ бота') }), counter),
     replyInput,
     varRow,
     el('div', { class: 'preview' },
-      el('div', { class: 'preview-head' }, el('span', { class: 'status-dot' }), el('span', { text: 'предпросмотр' })),
+      el('div', { class: 'preview-head' }, el('span', { class: 'status-dot' }), el('span', { text: t('предпросмотр') })),
       el('div', { class: 'preview-bubble' },
-        el('span', { class: 'preview-user', text: 'Аня' }),
+        el('span', { class: 'preview-user', text: t('Аня') }),
         previewText
       )
     ),
@@ -1135,9 +1157,9 @@ function renderCommandDrawer() {
   /* permission */
   const permissionSeg = el('div', { class: 'seg' });
   const permissionOptions = [
-    { value: 'everyone', label: 'Все' },
-    { value: 'mod', label: 'Модераторы' },
-    { value: 'broadcaster', label: 'Стример' }
+    { value: 'everyone', label: t('Все') },
+    { value: 'mod', label: t('Модераторы') },
+    { value: 'broadcaster', label: t('Стример') }
   ];
   permissionOptions.forEach(function (option) {
     permissionSeg.appendChild(el('button', {
@@ -1154,14 +1176,14 @@ function renderCommandDrawer() {
   });
 
   const permissionBlock = el('div', { class: 'form-section' },
-    el('label', { class: 'form-label' }, el('span', { text: 'Кто может пользоваться' })),
+    el('label', { class: 'form-label' }, el('span', { text: t('Кто может пользоваться') })),
     permissionSeg,
-    el('p', { class: 'form-hint', text: '«Модераторы» и «Стример» не показываются зрителям в !help.' })
+    el('p', { class: 'form-hint', text: t('«Модераторы» и «Стример» не показываются зрителям в !help.') })
   );
 
   /* platforms */
   const platformsBlock = el('div', { class: 'form-section' },
-    el('label', { class: 'form-label' }, el('span', { text: 'Платформы' }))
+    el('label', { class: 'form-label' }, el('span', { text: t('Платформы') }))
   );
   const platformRow = el('div', { class: 'check-row', id: 'cmd-platforms' });
   [
@@ -1182,7 +1204,7 @@ function renderCommandDrawer() {
       if (!draft.platforms.length) {
         draft.platforms = ['twitch'];
         input.checked = false;
-        fieldError('platforms', 'Нужна хотя бы одна платформа');
+        fieldError('platforms', t('Нужна хотя бы одна платформа'));
       }
       paintPlatforms();
       updatePreview();
@@ -1203,7 +1225,7 @@ function renderCommandDrawer() {
   platformsBlock.appendChild(platformRow);
   platformsBlock.appendChild(el('p', {
     class: 'form-hint',
-    text: meta.youtubeEnabled ? 'Куда бот может отвечать.' : 'YouTube выключен в config.js — доступен только Twitch.'
+    text: meta.youtubeEnabled ? t('Куда бот может отвечать.') : t('YouTube выключен в config.js — доступен только Twitch.')
   }));
   platformsBlock.appendChild(el('p', { class: 'field-error', dataset: { error: 'platforms' } }));
 
@@ -1216,16 +1238,16 @@ function renderCommandDrawer() {
     max: '3600',
     step: '1',
     value: draft.cooldownSec,
-    placeholder: 'по умолчанию'
+    placeholder: t('по умолчанию')
   });
   cooldownInput.addEventListener('input', function () {
     draft.cooldownSec = cooldownInput.value;
     clearError('cooldownMs');
   });
   const cooldownBlock = el('div', { class: 'form-section' },
-    el('label', { class: 'form-label', for: 'cmd-cooldown' }, el('span', { text: 'Своя задержка, секунды' })),
+    el('label', { class: 'form-label', for: 'cmd-cooldown' }, el('span', { text: t('Своя задержка, секунды') })),
     cooldownInput,
-    el('p', { class: 'form-hint', text: 'Пусто или 0 — общая задержка из настроек. Минимум 1 секунда.' }),
+    el('p', { class: 'form-hint', text: t('Пусто или 0 — общая задержка из настроек. Минимум 1 секунда.') }),
     el('p', { class: 'field-error', dataset: { error: 'cooldownMs' } })
   );
 
@@ -1235,8 +1257,8 @@ function renderCommandDrawer() {
   const enabledBlock = el('div', { class: 'form-section' },
     el('div', { class: 'switch-row' },
       el('div', { class: 'switch-copy' },
-        el('strong', { text: 'Команда включена' }),
-        el('span', { text: 'Выключенная команда не отвечает и не попадает в !help.' })
+        el('strong', { text: t('Команда включена') }),
+        el('span', { text: t('Выключенная команда не отвечает и не попадает в !help.') })
       ),
       el('label', { class: 'switch' }, enabledInput, el('span', { class: 'track' }))
     )
@@ -1253,8 +1275,8 @@ function renderCommandDrawer() {
     enabledBlock
   );
 
-  const saveBtn = button(isNew ? 'Создать команду' : 'Сохранить', 'check', 'primary');
-  const cancelBtn = button('Отмена', null, 'ghost', closeDrawer);
+  const saveBtn = button(isNew ? t('Создать команду') : t('Сохранить'), 'check', 'primary');
+  const cancelBtn = button(t('Отмена'), null, 'ghost', closeDrawer);
   saveBtn.addEventListener('click', saveCommandDraft);
 
   const overlay = el('div', { class: 'drawer-overlay' },
@@ -1266,15 +1288,15 @@ function renderCommandDrawer() {
     },
       el('header', { class: 'drawer-head' },
         el('div', null,
-          el('p', { class: 'eyebrow', text: isNew ? 'Новая команда' : 'Редактирование' }),
-          el('h2', { id: 'drawer-title', text: isNew ? 'Создать команду' : '!' + draft.name }),
-          el('p', { text: 'Ответ появится в чате Twitch' })
+          el('p', { class: 'eyebrow', text: isNew ? t('Новая команда') : t('Редактирование') }),
+          el('h2', { id: 'drawer-title', text: isNew ? t('Создать команду') : '!' + draft.name }),
+          el('p', { text: t('Ответ появится в чате Twitch') })
         ),
         el('button', {
           class: 'icon-btn',
           type: 'button',
-          title: 'Закрыть',
-          'aria-label': 'Закрыть',
+          title: t('Закрыть'),
+          'aria-label': t('Закрыть'),
           onClick: closeDrawer
         }, icon('x', 18))
       ),
@@ -1314,7 +1336,7 @@ function renderCommandDrawer() {
     if (state.saving) return;
     const errors = validateCommandDraft(draft, editing);
     if (Object.keys(errors).length) {
-      errorBox.textContent = 'Проверь поля формы';
+      errorBox.textContent = t('Проверь поля формы');
       errorBox.classList.add('visible');
       Object.keys(errors).forEach(function (field) { fieldError(field, errors[field]); });
       return;
@@ -1323,7 +1345,7 @@ function renderCommandDrawer() {
     state.saving = true;
     saveBtn.disabled = true;
     const hadLabel = saveBtn.querySelector('.btn-label');
-    if (hadLabel) hadLabel.textContent = 'Сохраняю…';
+    if (hadLabel) hadLabel.textContent = t('Сохраняю…');
 
     const base = editing.isNew ? {} : copy(state.panel.commands[editing.index]);
     const payload = Object.assign(base, {
@@ -1346,7 +1368,7 @@ function renderCommandDrawer() {
         body: JSON.stringify({ commands: next })
       });
       state.panel.commands = data.commands;
-      const message = editing.isNew ? 'Команда !' + payload.name + ' создана' : 'Команда !' + payload.name + ' сохранена';
+      const message = editing.isNew ? t('Команда !') + payload.name + t(' создана') : t('Команда !') + payload.name + t(' сохранена');
       closeDrawer();
       toast(message, 'ok');
       render();
@@ -1356,7 +1378,7 @@ function renderCommandDrawer() {
       errorBox.classList.add('visible');
       Object.keys(error.fields || {}).forEach(function (field) { fieldError(field, error.fields[field]); });
       saveBtn.disabled = false;
-      if (hadLabel) hadLabel.textContent = isNew ? 'Создать команду' : 'Сохранить';
+      if (hadLabel) hadLabel.textContent = isNew ? t('Создать команду') : t('Сохранить');
     } finally {
       state.saving = false;
     }
@@ -1373,9 +1395,9 @@ function validateCommandDraft(draft, editing) {
     (command.aliases || []).forEach(function (alias) { reserved.add(alias); });
   });
 
-  if (!name) errors.name = 'Введи имя команды';
-  else if (!/^[a-zа-яё0-9_-]{1,32}$/i.test(name)) errors.name = 'Только буквы, цифры, _ и -, до 32 символов';
-  else if (reserved.has(name)) errors.name = 'Это имя занято встроенной командой';
+  if (!name) errors.name = t('Введи имя команды');
+  else if (!/^[a-zа-яё0-9_-]{1,32}$/i.test(name)) errors.name = t('Только буквы, цифры, _ и -, до 32 символов');
+  else if (reserved.has(name)) errors.name = t('Это имя занято встроенной командой');
 
   const used = new Map();
   state.panel.commands.forEach(function (command, index) {
@@ -1383,27 +1405,27 @@ function validateCommandDraft(draft, editing) {
     used.set(command.name, 'name');
     (command.aliases || []).forEach(function (alias) { used.set(alias, 'aliases'); });
   });
-  if (!errors.name && used.has(name)) errors.name = 'Такая команда или алиас уже есть';
+  if (!errors.name && used.has(name)) errors.name = t('Такая команда или алиас уже есть');
 
   draft.aliases.forEach(function (alias) {
-    if (!/^[a-zа-яё0-9_-]{1,32}$/i.test(alias)) errors.aliases = 'Алиас «' + alias + '» не подходит';
-    else if (reserved.has(alias)) errors.aliases = 'Алиас «' + alias + '» занят встроенной командой';
-    else if (used.has(alias)) errors.aliases = 'Алиас «' + alias + '» уже используется';
+    if (!/^[a-zа-яё0-9_-]{1,32}$/i.test(alias)) errors.aliases = t('Алиас «') + alias + t('» не подходит');
+    else if (reserved.has(alias)) errors.aliases = t('Алиас «') + alias + t('» занят встроенной командой');
+    else if (used.has(alias)) errors.aliases = t('Алиас «') + alias + t('» уже используется');
   });
-  if (draft.aliases.length > meta.maxAliases) errors.aliases = 'Максимум ' + meta.maxAliases + ' алиасов';
+  if (draft.aliases.length > meta.maxAliases) errors.aliases = t('Максимум ') + meta.maxAliases + t(' алиасов');
 
-  if (!draft.reply.trim()) errors.reply = 'Напиши текст ответа';
+  if (!draft.reply.trim()) errors.reply = t('Напиши текст ответа');
   else {
     const limit = currentReplyLimit(draft.platforms);
-    if (draft.reply.length > limit) errors.reply = 'Сократи ответ до ' + limit + ' символов';
+    if (draft.reply.length > limit) errors.reply = t('Сократи ответ до ') + limit + t(' символов');
   }
 
-  if (!draft.platforms.length) errors.platforms = 'Нужна хотя бы одна платформа';
+  if (!draft.platforms.length) errors.platforms = t('Нужна хотя бы одна платформа');
 
   if (draft.cooldownSec !== '') {
     const value = Number(draft.cooldownSec);
     if (!Number.isFinite(value) || value < 1 || value > 3600 || Math.round(value) !== value) {
-      errors.cooldownMs = 'Целое число от 1 до 3600 секунд';
+      errors.cooldownMs = t('Целое число от 1 до 3600 секунд');
     }
   }
 
@@ -1444,11 +1466,11 @@ function renderTimersView() {
   wrap.appendChild(el('div', { class: 'note-banner' },
     icon('info', 16),
     el('div', null,
-      el('strong', { text: 'Автосообщения не спамят. ' }),
+      el('strong', { text: t('Автосообщения не спамят. ') }),
       el('span', {
-        text: 'Бот пишет только если в чате была активность за последние ' +
-          p.meta.activityWindowMinutes + ' мин, и держит паузу ' +
-          Math.round(p.meta.minGapMs / 60000) + ' мин между любыми автосообщениями.'
+        text: t('Бот пишет только если в чате была активность за последние ') +
+          p.meta.activityWindowMinutes + t(' мин, и держит паузу ') +
+          Math.round(p.meta.minGapMs / 60000) + t(' мин между любыми автосообщениями.')
       })
     )
   ));
@@ -1456,9 +1478,9 @@ function renderTimersView() {
   if (!p.timers.length) {
     wrap.appendChild(el('div', { class: 'empty' },
       el('span', { class: 'empty-icon' }, icon('timers', 23)),
-      el('h3', { text: 'Расписание пока пустое' }),
-      el('p', { text: 'Добавь первое автосообщение — например, напоминание о ссылках раз в 30 минут.' }),
-      button('Добавить автосообщение', 'plus', 'primary small', function () { openTimerDrawer(null); })
+      el('h3', { text: t('Расписание пока пустое') }),
+      el('p', { text: t('Добавь первое автосообщение — например, напоминание о ссылках раз в 30 минут.') }),
+      button(t('Добавить автосообщение'), 'plus', 'primary small', function () { openTimerDrawer(null); })
     ));
     return wrap;
   }
@@ -1470,7 +1492,7 @@ function renderTimersView() {
     list.appendChild(el('article', { class: 'timer-card ' + (enabled ? '' : 'disabled') },
       el('div', { class: 'timer-interval' },
         el('strong', { text: String(timer.everyMinutes) }),
-        el('span', { text: 'минут' })
+        el('span', { text: t('минут') })
       ),
       el('div', { class: 'timer-body' },
         el('p', { class: 'timer-text', text: timer.text }),
@@ -1481,7 +1503,7 @@ function renderTimersView() {
           el('span', {
             class: 'chip ' + (enabled ? '' : 'warn'),
             dataset: { nextTimer: timer.id },
-            text: enabled ? (next === null ? 'ждёт статус' : formatNext(next)) : 'выключено'
+            text: enabled ? (next === null ? t('ждёт статус') : formatNext(next)) : t('выключено')
           })
         )
       ),
@@ -1489,22 +1511,22 @@ function renderTimersView() {
         el('button', {
           class: 'icon-btn',
           type: 'button',
-          title: 'Редактировать',
-          'aria-label': 'Редактировать автосообщение',
+          title: t('Редактировать'),
+          'aria-label': t('Редактировать автосообщение'),
           onClick: function () { openTimerDrawer(index); }
         }, icon('edit', 16)),
         el('button', {
           class: 'icon-btn danger',
           type: 'button',
-          title: 'Удалить',
-          'aria-label': 'Удалить автосообщение',
+          title: t('Удалить'),
+          'aria-label': t('Удалить автосообщение'),
           onClick: function () { askDeleteTimer(index); }
         }, icon('trash', 16)),
-        el('label', { class: 'switch', title: enabled ? 'Выключить' : 'Включить' },
+        el('label', { class: 'switch', title: enabled ? t('Выключить') : t('Включить') },
           el('input', {
             type: 'checkbox',
             checked: enabled,
-            'aria-label': (enabled ? 'Выключить' : 'Включить') + ' автосообщение',
+            'aria-label': (enabled ? t('Выключить') : t('Включить')) + t(' автосообщение'),
             onChange: function (event) { toggleTimer(index, event.target.checked); }
           }),
           el('span', { class: 'track' })
@@ -1526,12 +1548,12 @@ function updateTimerNextLabels() {
   document.querySelectorAll('[data-next-timer]').forEach(function (node) {
     const card = node.closest('.timer-card');
     if (card && card.classList.contains('disabled')) {
-      node.textContent = 'выключено';
+      node.textContent = t('выключено');
       return;
     }
     const id = node.dataset.nextTimer;
     const next = findNextTimer(id);
-    node.textContent = next === null ? 'ждёт статус' : formatNext(next);
+    node.textContent = next === null ? t('ждёт статус') : formatNext(next);
   });
 }
 
@@ -1540,20 +1562,20 @@ async function toggleTimer(index, enabled) {
   const next = copy(state.panel.timers);
   if (!next[index]) return;
   next[index].enabled = enabled;
-  await saveTimerList(next, enabled ? 'Автосообщение включено' : 'Автосообщение выключено');
+  await saveTimerList(next, enabled ? t('Автосообщение включено') : t('Автосообщение выключено'));
 }
 
 function askDeleteTimer(index) {
   const timer = state.panel.timers[index];
   if (!timer) return;
   confirmDialog(
-    'Удалить автосообщение?',
-    'Текст «' + timer.text.slice(0, 80) + (timer.text.length > 80 ? '…' : '') + '» исчезнет из config.js.',
-    'Удалить',
+    t('Удалить автосообщение?'),
+    t('Текст «') + timer.text.slice(0, 80) + (timer.text.length > 80 ? '…' : '') + t('» исчезнет из config.js.'),
+    t('Удалить'),
     function () {
       const next = copy(state.panel.timers);
       next.splice(index, 1);
-      saveTimerList(next, 'Автосообщение удалено');
+      saveTimerList(next, t('Автосообщение удалено'));
     }
   );
 }
@@ -1567,7 +1589,7 @@ async function saveTimerList(next, message) {
       body: JSON.stringify({ timers: next })
     });
     state.panel.timers = data.timers;
-    toast(message || 'Расписание сохранено', 'ok');
+    toast(message || t('Расписание сохранено'), 'ok');
     render();
     refreshStatus();
   } catch (error) {
@@ -1615,7 +1637,7 @@ function renderTimerDrawer() {
   const counter = el('span', { class: 'counter' });
 
   function updatePreview() {
-    previewText.textContent = renderVars(draft.text || 'Здесь появится автосообщение');
+    previewText.textContent = renderVars(draft.text || t('Здесь появится автосообщение'));
     const limit = currentTimerLimit(draft.platforms);
     counter.textContent = draft.text.length + ' / ' + limit;
     counter.classList.toggle('over', draft.text.length > limit);
@@ -1643,7 +1665,7 @@ function renderTimerDrawer() {
     class: 'input',
     id: 'timer-text',
     rows: '4',
-    placeholder: 'Все ссылки: {socials}'
+    placeholder: t('Все ссылки: {socials}')
   });
   textInput.value = draft.text;
   textInput.addEventListener('input', function () {
@@ -1658,7 +1680,7 @@ function renderTimerDrawer() {
       class: 'var-chip',
       type: 'button',
       text: variable,
-      title: 'Вставить ' + variable,
+      title: t('Вставить ') + variable,
       onClick: function () {
         const start = textInput.selectionStart == null ? textInput.value.length : textInput.selectionStart;
         const end = textInput.selectionEnd == null ? start : textInput.selectionEnd;
@@ -1670,13 +1692,13 @@ function renderTimerDrawer() {
   });
 
   const textBlock = el('div', { class: 'form-section' },
-    el('label', { class: 'form-label', for: 'timer-text' }, el('span', { text: 'Текст сообщения' }), counter),
+    el('label', { class: 'form-label', for: 'timer-text' }, el('span', { text: t('Текст сообщения') }), counter),
     textInput,
     varRow,
     el('div', { class: 'preview' },
-      el('div', { class: 'preview-head' }, el('span', { class: 'status-dot' }), el('span', { text: 'предпросмотр' })),
+      el('div', { class: 'preview-head' }, el('span', { class: 'status-dot' }), el('span', { text: t('предпросмотр') })),
       el('div', { class: 'preview-bubble' },
-        el('span', { class: 'preview-user', text: 'бот' }),
+        el('span', { class: 'preview-user', text: t('бот') }),
         previewText
       )
     ),
@@ -1698,9 +1720,9 @@ function renderTimerDrawer() {
   });
 
   const intervalBlock = el('div', { class: 'form-section' },
-    el('label', { class: 'form-label', for: 'timer-everyMinutes' }, el('span', { text: 'Интервал, минут' })),
+    el('label', { class: 'form-label', for: 'timer-everyMinutes' }, el('span', { text: t('Интервал, минут') })),
     intervalInput,
-    el('p', { class: 'form-hint', text: 'От 1 до 1440 минут. Первое сообщение — только через полный интервал.' }),
+    el('p', { class: 'form-hint', text: t('От 1 до 1440 минут. Первое сообщение — только через полный интервал.') }),
     el('p', { class: 'field-error', dataset: { error: 'everyMinutes' } })
   );
 
@@ -1737,7 +1759,7 @@ function renderTimerDrawer() {
   }
 
   const platformBlock = el('div', { class: 'form-section' },
-    el('label', { class: 'form-label' }, el('span', { text: 'Платформы' })),
+    el('label', { class: 'form-label' }, el('span', { text: t('Платформы') })),
     platformRow,
     el('p', { class: 'field-error', dataset: { error: 'platforms' } })
   );
@@ -1747,8 +1769,8 @@ function renderTimerDrawer() {
   const enabledBlock = el('div', { class: 'form-section' },
     el('div', { class: 'switch-row' },
       el('div', { class: 'switch-copy' },
-        el('strong', { text: 'Автосообщение включено' }),
-        el('span', { text: 'Выключенное не попадает в расписание.' })
+        el('strong', { text: t('Автосообщение включено') }),
+        el('span', { text: t('Выключенное не попадает в расписание.') })
       ),
       el('label', { class: 'switch' }, enabledInput, el('span', { class: 'track' }))
     )
@@ -1758,18 +1780,18 @@ function renderTimerDrawer() {
     errorBox, textBlock, intervalBlock, platformBlock, enabledBlock
   );
 
-  const saveBtn = button(isNew ? 'Создать' : 'Сохранить', 'check', 'primary');
-  const cancelBtn = button('Отмена', null, 'ghost', closeDrawer);
+  const saveBtn = button(isNew ? t('Создать') : t('Сохранить'), 'check', 'primary');
+  const cancelBtn = button(t('Отмена'), null, 'ghost', closeDrawer);
 
   const overlay = el('div', { class: 'drawer-overlay' },
     el('aside', { class: 'drawer', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'drawer-title' },
       el('header', { class: 'drawer-head' },
         el('div', null,
-          el('p', { class: 'eyebrow', text: isNew ? 'Новое автосообщение' : 'Редактирование' }),
-          el('h2', { id: 'drawer-title', text: isNew ? 'Добавить в расписание' : 'Автосообщение' }),
-          el('p', { text: 'Пишется только в активный чат' })
+          el('p', { class: 'eyebrow', text: isNew ? t('Новое автосообщение') : t('Редактирование') }),
+          el('h2', { id: 'drawer-title', text: isNew ? t('Добавить в расписание') : t('Автосообщение') }),
+          el('p', { text: t('Пишется только в активный чат') })
         ),
-        el('button', { class: 'icon-btn', type: 'button', title: 'Закрыть', 'aria-label': 'Закрыть', onClick: closeDrawer }, icon('x', 18))
+        el('button', { class: 'icon-btn', type: 'button', title: t('Закрыть'), 'aria-label': t('Закрыть'), onClick: closeDrawer }, icon('x', 18))
       ),
       body,
       el('footer', { class: 'drawer-foot' }, cancelBtn, saveBtn)
@@ -1800,7 +1822,7 @@ function renderTimerDrawer() {
     if (state.saving) return;
     const errors = validateTimerDraft(draft);
     if (Object.keys(errors).length) {
-      errorBox.textContent = 'Проверь поля формы';
+      errorBox.textContent = t('Проверь поля формы');
       errorBox.classList.add('visible');
       Object.keys(errors).forEach(function (field) { fieldError(field, errors[field]); });
       return;
@@ -1809,7 +1831,7 @@ function renderTimerDrawer() {
     state.saving = true;
     saveBtn.disabled = true;
     const label = saveBtn.querySelector('.btn-label');
-    if (label) label.textContent = 'Сохраняю…';
+    if (label) label.textContent = t('Сохраняю…');
 
     const payload = {
       text: draft.text,
@@ -1831,7 +1853,7 @@ function renderTimerDrawer() {
       });
       state.panel.timers = data.timers;
       closeDrawer();
-      toast(isNew ? 'Автосообщение добавлено' : 'Автосообщение сохранено', 'ok');
+      toast(isNew ? t('Автосообщение добавлено') : t('Автосообщение сохранено'), 'ok');
       render();
       refreshStatus();
     } catch (error) {
@@ -1839,7 +1861,7 @@ function renderTimerDrawer() {
       errorBox.classList.add('visible');
       Object.keys(error.fields || {}).forEach(function (field) { fieldError(field, error.fields[field]); });
       saveBtn.disabled = false;
-      if (label) label.textContent = isNew ? 'Создать' : 'Сохранить';
+      if (label) label.textContent = isNew ? t('Создать') : t('Сохранить');
     } finally {
       state.saving = false;
     }
@@ -1852,16 +1874,16 @@ function currentTimerLimit(platforms) {
 
 function validateTimerDraft(draft) {
   const errors = {};
-  if (!draft.text.trim()) errors.text = 'Напиши текст автосообщения';
+  if (!draft.text.trim()) errors.text = t('Напиши текст автосообщения');
   else {
     const limit = currentTimerLimit(draft.platforms);
-    if (draft.text.length > limit) errors.text = 'Сократи текст до ' + limit + ' символов';
+    if (draft.text.length > limit) errors.text = t('Сократи текст до ') + limit + t(' символов');
   }
   const minutes = Number(draft.everyMinutes);
   if (!Number.isFinite(minutes) || minutes < 1 || minutes > 1440 || Math.round(minutes) !== minutes) {
-    errors.everyMinutes = 'Целое число от 1 до 1440';
+    errors.everyMinutes = t('Целое число от 1 до 1440');
   }
-  if (!draft.platforms.length) errors.platforms = 'Выбери платформу';
+  if (!draft.platforms.length) errors.platforms = t('Выбери платформу');
   return errors;
 }
 
@@ -1936,14 +1958,14 @@ function markModDirty() {
   state.modDirty = true;
   renderTopbar();
   const sub = document.getElementById('page-sub');
-  if (sub) sub.textContent = 'Есть несохранённые изменения';
+  if (sub) sub.textContent = t('Есть несохранённые изменения');
 }
 
 function markFunDirty() {
   state.funDirty = true;
   renderTopbar();
   const sub = document.getElementById('page-sub');
-  if (sub) sub.textContent = 'Есть несохранённые изменения';
+  if (sub) sub.textContent = t('Есть несохранённые изменения');
 }
 
 function renderModerationView() {
@@ -1953,104 +1975,104 @@ function renderModerationView() {
 
   const wrap = el('div', { class: 'settings-view' });
   wrap.appendChild(el('div', { class: 'stats' },
-    statCard('Удалено', stats.deleted || 0, 'chat', '#a970ff', 'rgba(169, 112, 255, 0.12)', 'rgba(169, 112, 255, 0.18)'),
-    statCard('Мутов', stats.timeouts || 0, 'timers', '#ffb020', 'rgba(255, 176, 32, 0.12)', 'rgba(255, 176, 32, 0.18)'),
-    statCard('Банов', stats.bans || 0, 'lock', '#ff6172', 'rgba(255, 97, 114, 0.12)', 'rgba(255, 97, 114, 0.18)'),
-    statCard('Нарушений', stats.violations || 0, 'alert', '#45d483', 'rgba(69, 212, 131, 0.12)', 'rgba(69, 212, 131, 0.18)')
+    statCard(t('Удалено'), stats.deleted || 0, 'chat', '#a970ff', 'rgba(169, 112, 255, 0.12)', 'rgba(169, 112, 255, 0.18)'),
+    statCard(t('Мутов'), stats.timeouts || 0, 'timers', '#ffb020', 'rgba(255, 176, 32, 0.12)', 'rgba(255, 176, 32, 0.18)'),
+    statCard(t('Банов'), stats.bans || 0, 'lock', '#ff6172', 'rgba(255, 97, 114, 0.12)', 'rgba(255, 97, 114, 0.18)'),
+    statCard(t('Нарушений'), stats.violations || 0, 'alert', '#45d483', 'rgba(69, 212, 131, 0.12)', 'rgba(69, 212, 131, 0.18)')
   ));
 
   const columns = el('div', { class: 'settings-columns' });
   const left = el('div', { class: 'stack' });
   const right = el('div', { class: 'stack' });
 
-  left.appendChild(settingsCard('Основное', 'Автоматическая модерация сообщений в чате', draft.enabled ? 'включена' : 'выключена', [
-    settingToggle('Модерация включена', 'Проверять каждое сообщение в чате', draft.enabled !== false, function (value) {
+  left.appendChild(settingsCard(t('Основное'), t('Автоматическая модерация сообщений в чате'), draft.enabled ? t('включена') : t('выключена'), [
+    settingToggle(t('Модерация включена'), t('Проверять каждое сообщение в чате'), draft.enabled !== false, function (value) {
       draft.enabled = value; markModDirty();
     }),
-    settingToggle('Удалять нарушения', 'Бот удаляет сообщение через /delete', draft.deleteMessages !== false, function (value) {
+    settingToggle(t('Удалять нарушения'), t('Бот удаляет сообщение через /delete'), draft.deleteMessages !== false, function (value) {
       draft.deleteMessages = value; markModDirty();
     }),
-    settingToggle('Предупреждать в чате', 'Короткий ответ нарушителю (не чаще раза в минуту)', draft.warnInChat !== false, function (value) {
+    settingToggle(t('Предупреждать в чате'), t('Короткий ответ нарушителю (не чаще раза в минуту)'), draft.warnInChat !== false, function (value) {
       draft.warnInChat = value; markModDirty();
     })
   ]));
 
   draft.exempt = draft.exempt || {};
-  left.appendChild(settingsCard('Кого не трогать', 'Освобождение от автоматической модерации', '', [
+  left.appendChild(settingsCard(t('Кого не трогать'), t('Освобождение от автоматической модерации'), '', [
     el('div', { class: 'settings-toggles' },
-      settingToggle('Модераторов', '', draft.exempt.mods !== false, function (v) { draft.exempt.mods = v; markModDirty(); }),
-      settingToggle('Стримера', '', draft.exempt.broadcaster !== false, function (v) { draft.exempt.broadcaster = v; markModDirty(); }),
-      settingToggle('Подписчиков', '', draft.exempt.subscribers !== false, function (v) { draft.exempt.subscribers = v; markModDirty(); }),
+      settingToggle(t('Модераторов'), '', draft.exempt.mods !== false, function (v) { draft.exempt.mods = v; markModDirty(); }),
+      settingToggle(t('Стримера'), '', draft.exempt.broadcaster !== false, function (v) { draft.exempt.broadcaster = v; markModDirty(); }),
+      settingToggle(t('Подписчиков'), '', draft.exempt.subscribers !== false, function (v) { draft.exempt.subscribers = v; markModDirty(); }),
       settingToggle('VIP', '', draft.exempt.vips !== false, function (v) { draft.exempt.vips = v; markModDirty(); })
     ),
-    settingArea('Свои ники (по одному в строке)', (draft.exempt.users || []).join('\n'), function (value) {
+    settingArea(t('Свои ники (по одному в строке)'), (draft.exempt.users || []).join('\n'), function (value) {
       draft.exempt.users = value.split(/\n+/).map(function (item) { return item.trim(); }).filter(Boolean);
       markModDirty();
-    }, 'Этих зрителей модерация не проверяет.', 3)
+    }, t('Этих зрителей модерация не проверяет.'), 3)
   ]));
 
   draft.bannedWords = draft.bannedWords || {};
-  left.appendChild(settingsCard('Запрещённые слова', 'Удаление и наказание за недопустимые слова', '', [
-    settingToggle('Проверять слова', '', draft.bannedWords.enabled !== false, function (value) {
+  left.appendChild(settingsCard(t('Запрещённые слова'), t('Удаление и наказание за недопустимые слова'), '', [
+    settingToggle(t('Проверять слова'), '', draft.bannedWords.enabled !== false, function (value) {
       draft.bannedWords.enabled = value; markModDirty();
     }),
-    settingArea('Слова и фразы (по одному в строке)',
+    settingArea(t('Слова и фразы (по одному в строке)'),
       (draft.bannedWords.words || []).join('\n'),
       function (value) {
         draft.bannedWords.words = value.split(/\n+/).map(function (item) { return item.trim(); }).filter(Boolean);
         markModDirty();
       },
-      'Совпадение без учёта регистра. Фразы можно писать с пробелами.', 6)
+      t('Совпадение без учёта регистра. Фразы можно писать с пробелами.'), 6)
   ]));
 
   draft.links = draft.links || {};
-  left.appendChild(settingsCard('Ссылки', 'Сторонние ссылки удаляются, разрешённые — пропускаются', '', [
-    settingToggle('Проверять ссылки', '', draft.links.enabled !== false, function (value) {
+  left.appendChild(settingsCard(t('Ссылки'), t('Сторонние ссылки удаляются, разрешённые — пропускаются'), '', [
+    settingToggle(t('Проверять ссылки'), '', draft.links.enabled !== false, function (value) {
       draft.links.enabled = value; markModDirty();
     }),
-    settingToggle('Разрешать ссылки из «Ссылок»', 'Домены Twitch, YouTube, Discord, Telegram и т.д.', draft.links.useSocials !== false, function (value) {
+    settingToggle(t('Разрешать ссылки из «Ссылок»'), t('Домены Twitch, YouTube, Discord, Telegram и т.д.'), draft.links.useSocials !== false, function (value) {
       draft.links.useSocials = value; markModDirty();
     }),
-    settingArea('Разрешённые домены (по одному в строке)',
+    settingArea(t('Разрешённые домены (по одному в строке)'),
       (draft.links.allow || []).join('\n'),
       function (value) {
         draft.links.allow = value.split(/\n+/).map(function (item) { return item.trim(); }).filter(Boolean);
         markModDirty();
       },
-      'Поддомены разрешаются автоматически: clips.twitch.tv подходит для twitch.tv.', 6)
+      t('Поддомены разрешаются автоматически: clips.twitch.tv подходит для twitch.tv.'), 6)
   ]));
 
   draft.caps = draft.caps || {};
-  right.appendChild(settingsCard('Капс', 'Слишком громкие сообщения', '', [
-    settingToggle('Проверять капс', '', draft.caps.enabled !== false, function (value) {
+  right.appendChild(settingsCard(t('Капс'), t('Слишком громкие сообщения'), '', [
+    settingToggle(t('Проверять капс'), '', draft.caps.enabled !== false, function (value) {
       draft.caps.enabled = value; markModDirty();
     }),
-    settingNumber('Минимум букв', draft.caps.minLength, 1, 200, function (value) { draft.caps.minLength = value; markModDirty(); }, 'Короткие сообщения не проверяются.'),
-    settingNumber('Доля заглавных, %', draft.caps.percent, 1, 100, function (value) { draft.caps.percent = value; markModDirty(); }, 'Например, 70 — сообщение почти полностью капсом.')
+    settingNumber(t('Минимум букв'), draft.caps.minLength, 1, 200, function (value) { draft.caps.minLength = value; markModDirty(); }, t('Короткие сообщения не проверяются.')),
+    settingNumber(t('Доля заглавных, %'), draft.caps.percent, 1, 100, function (value) { draft.caps.percent = value; markModDirty(); }, t('Например, 70 — сообщение почти полностью капсом.'))
   ]));
 
   draft.spam = draft.spam || {};
-  right.appendChild(settingsCard('Спам и флуд', 'Частота, повторы, длина', '', [
-    settingToggle('Проверять спам', '', draft.spam.enabled !== false, function (value) {
+  right.appendChild(settingsCard(t('Спам и флуд'), t('Частота, повторы, длина'), '', [
+    settingToggle(t('Проверять спам'), '', draft.spam.enabled !== false, function (value) {
       draft.spam.enabled = value; markModDirty();
     }),
-    settingNumber('Сообщений за окно', draft.spam.maxMessages, 2, 100, function (value) { draft.spam.maxMessages = value; markModDirty(); }),
-    settingNumber('Окно, секунд', draft.spam.windowSec, 1, 300, function (value) { draft.spam.windowSec = value; markModDirty(); }),
-    settingNumber('Повторов одного текста', draft.spam.duplicateCount, 2, 100, function (value) { draft.spam.duplicateCount = value; markModDirty(); }),
-    settingNumber('Окно повторов, секунд', draft.spam.duplicateWindowSec, 1, 600, function (value) { draft.spam.duplicateWindowSec = value; markModDirty(); }),
-    settingNumber('Максимум символов', draft.spam.maxLength, 50, 500, function (value) { draft.spam.maxLength = value; markModDirty(); })
+    settingNumber(t('Сообщений за окно'), draft.spam.maxMessages, 2, 100, function (value) { draft.spam.maxMessages = value; markModDirty(); }),
+    settingNumber(t('Окно, секунд'), draft.spam.windowSec, 1, 300, function (value) { draft.spam.windowSec = value; markModDirty(); }),
+    settingNumber(t('Повторов одного текста'), draft.spam.duplicateCount, 2, 100, function (value) { draft.spam.duplicateCount = value; markModDirty(); }),
+    settingNumber(t('Окно повторов, секунд'), draft.spam.duplicateWindowSec, 1, 600, function (value) { draft.spam.duplicateWindowSec = value; markModDirty(); }),
+    settingNumber(t('Максимум символов'), draft.spam.maxLength, 50, 500, function (value) { draft.spam.maxLength = value; markModDirty(); })
   ]));
 
   draft.punishment = draft.punishment || {};
-  right.appendChild(settingsCard('Наказания', 'Мут и бан по числу нарушений', '', [
-    settingToggle('Выдавать наказания', 'Если выключено — бот только удаляет сообщения', draft.punishment.enabled !== false, function (value) {
+  right.appendChild(settingsCard(t('Наказания'), t('Мут и бан по числу нарушений'), '', [
+    settingToggle(t('Выдавать наказания'), t('Если выключено — бот только удаляет сообщения'), draft.punishment.enabled !== false, function (value) {
       draft.punishment.enabled = value; markModDirty();
     }),
-    settingNumber('Мут со страйка', draft.punishment.timeoutAfter, 1, 50, function (value) { draft.punishment.timeoutAfter = value; markModDirty(); }, 'Первый мут после N нарушений.'),
-    settingNumber('Длительность мута, сек', draft.punishment.timeoutSec, 1, 1209600, function (value) { draft.punishment.timeoutSec = value; markModDirty(); }, 'Дальше длительность растёт с каждым нарушением.'),
-    settingNumber('Бан со страйка', draft.punishment.banAfter, 0, 100, function (value) { draft.punishment.banAfter = value; markModDirty(); }, '0 — не банить автоматически.'),
-    settingNumber('Окно страйков, минут', draft.punishment.strikeWindowMin, 1, 1440, function (value) { draft.punishment.strikeWindowMin = value; markModDirty(); }),
-    settingText('Причина наказания', draft.punishment.reason, function (value) { draft.punishment.reason = value; markModDirty(); }, 'Её увидит модератор в истории наказаний.')
+    settingNumber(t('Мут со страйка'), draft.punishment.timeoutAfter, 1, 50, function (value) { draft.punishment.timeoutAfter = value; markModDirty(); }, t('Первый мут после N нарушений.')),
+    settingNumber(t('Длительность мута, сек'), draft.punishment.timeoutSec, 1, 1209600, function (value) { draft.punishment.timeoutSec = value; markModDirty(); }, t('Дальше длительность растёт с каждым нарушением.')),
+    settingNumber(t('Бан со страйка'), draft.punishment.banAfter, 0, 100, function (value) { draft.punishment.banAfter = value; markModDirty(); }, t('0 — не банить автоматически.')),
+    settingNumber(t('Окно страйков, минут'), draft.punishment.strikeWindowMin, 1, 1440, function (value) { draft.punishment.strikeWindowMin = value; markModDirty(); }),
+    settingText(t('Причина наказания'), draft.punishment.reason, function (value) { draft.punishment.reason = value; markModDirty(); }, t('Её увидит модератор в истории наказаний.'))
   ]));
 
   columns.appendChild(left);
@@ -2060,11 +2082,11 @@ function renderModerationView() {
   wrap.appendChild(el('div', { class: 'save-bar' },
     el('span', { class: 'dirty-note', style: { visibility: state.modDirty ? 'visible' : 'hidden' } },
       icon('info', 14),
-      el('span', { text: 'Есть несохранённые изменения' })
+      el('span', { text: t('Есть несохранённые изменения') })
     ),
     el('div', { class: 'check-row' },
-      button('Сбросить', 'reset', 'ghost small', resetModeration),
-      button('Сохранить', 'save', 'primary small', saveModerationSettings)
+      button(t('Сбросить'), 'reset', 'ghost small', resetModeration),
+      button(t('Сохранить'), 'save', 'primary small', saveModerationSettings)
     )
   ));
 
@@ -2113,8 +2135,8 @@ function renderFunView() {
   wrap.appendChild(el('div', { class: 'note-banner' },
     icon('spark', 16),
     el('div', null,
-      el('strong', { text: 'Как это работает' }),
-      el('p', { text: 'Зрители получают баллы за сообщения и ежедневный вход. Баллы тратятся на участие в розыгрышах. Викторина начисляет награду за первый правильный ответ.' })
+      el('strong', { text: t('Как это работает') }),
+      el('p', { text: t('Зрители получают баллы за сообщения и ежедневный вход. Баллы тратятся на участие в розыгрышах. Викторина начисляет награду за первый правильный ответ.') })
     )
   ));
 
@@ -2122,15 +2144,15 @@ function renderFunView() {
   const left = el('div', { class: 'stack' });
   const right = el('div', { class: 'stack' });
 
-  left.appendChild(settingsCard('Баллы', 'Внутренняя валюта канала', draft.points.currency || 'балл', [
-    settingToggle('Система баллов включена', '', draft.points.enabled !== false, function (value) {
+  left.appendChild(settingsCard(t('Баллы'), t('Внутренняя валюта канала'), draft.points.currency || t('балл'), [
+    settingToggle(t('Система баллов включена'), '', draft.points.enabled !== false, function (value) {
       draft.points.enabled = value; markFunDirty();
     }),
-    settingText('Название валюты', draft.points.currency || 'балл', function (value) { draft.points.currency = value; markFunDirty(); }),
-    settingNumber('Баллов за сообщение', draft.points.perMessage, 0, 1000, function (value) { draft.points.perMessage = value; markFunDirty(); }),
-    settingNumber('Задержка начисления, сек', draft.points.messageCooldownSec, 1, 3600, function (value) { draft.points.messageCooldownSec = value; markFunDirty(); }),
-    settingNumber('Ежедневный бонус', draft.points.dailyBonus, 0, 100000, function (value) { draft.points.dailyBonus = value; markFunDirty(); }),
-    settingNumber('Минимум для перевода', draft.points.transferMin, 1, 100000, function (value) { draft.points.transferMin = value; markFunDirty(); })
+    settingText(t('Название валюты'), draft.points.currency || t('балл'), function (value) { draft.points.currency = value; markFunDirty(); }),
+    settingNumber(t('Баллов за сообщение'), draft.points.perMessage, 0, 1000, function (value) { draft.points.perMessage = value; markFunDirty(); }),
+    settingNumber(t('Задержка начисления, сек'), draft.points.messageCooldownSec, 1, 3600, function (value) { draft.points.messageCooldownSec = value; markFunDirty(); }),
+    settingNumber(t('Ежедневный бонус'), draft.points.dailyBonus, 0, 100000, function (value) { draft.points.dailyBonus = value; markFunDirty(); }),
+    settingNumber(t('Минимум для перевода'), draft.points.transferMin, 1, 100000, function (value) { draft.points.transferMin = value; markFunDirty(); })
   ]));
 
   if (pointsLive.users && pointsLive.users.length) {
@@ -2140,56 +2162,56 @@ function renderFunView() {
         el('span', { class: 'mini-next', text: String(item.points) })
       );
     }));
-    left.appendChild(settingsCard('Топ по баллам', 'Живые данные', '', [top]));
+    left.appendChild(settingsCard(t('Топ по баллам'), t('Живые данные'), '', [top]));
   }
 
-  left.appendChild(settingsCard('Розыгрыши', 'Вход по ключевому слову или !join', '', [
-    settingToggle('Розыгрыши включены', '', draft.giveaways.enabled !== false, function (value) {
+  left.appendChild(settingsCard(t('Розыгрыши'), t('Вход по ключевому слову или !join'), '', [
+    settingToggle(t('Розыгрыши включены'), '', draft.giveaways.enabled !== false, function (value) {
       draft.giveaways.enabled = value; markFunDirty();
     }),
-    settingNumber('Длительность по умолчанию, мин', draft.giveaways.defaultMinutes, 1, 120, function (value) { draft.giveaways.defaultMinutes = value; markFunDirty(); }),
-    settingNumber('Победителей по умолчанию', draft.giveaways.defaultWinners, 1, 20, function (value) { draft.giveaways.defaultWinners = value; markFunDirty(); }),
-    settingNumber('Стоимость участия, баллов', draft.giveaways.entryCost, 0, 100000, function (value) { draft.giveaways.entryCost = value; markFunDirty(); }, '0 — бесплатно.'),
-    settingToggle('Разрешать несколько заявок', 'Один зритель сможет участвовать повторно', draft.giveaways.allowMultiple === true, function (value) {
+    settingNumber(t('Длительность по умолчанию, мин'), draft.giveaways.defaultMinutes, 1, 120, function (value) { draft.giveaways.defaultMinutes = value; markFunDirty(); }),
+    settingNumber(t('Победителей по умолчанию'), draft.giveaways.defaultWinners, 1, 20, function (value) { draft.giveaways.defaultWinners = value; markFunDirty(); }),
+    settingNumber(t('Стоимость участия, баллов'), draft.giveaways.entryCost, 0, 100000, function (value) { draft.giveaways.entryCost = value; markFunDirty(); }, t('0 — бесплатно.')),
+    settingToggle(t('Разрешать несколько заявок'), t('Один зритель сможет участвовать повторно'), draft.giveaways.allowMultiple === true, function (value) {
       draft.giveaways.allowMultiple = value; markFunDirty();
     }),
-    settingArea('Старт розыгрыша', draft.giveaways.messages.start || '', function (value) { draft.giveaways.messages.start = value; markFunDirty(); }, 'Переменные: {prize} {keyword} {minutes} {winners}', 3),
-    settingArea('Победитель', draft.giveaways.messages.winner || '', function (value) { draft.giveaways.messages.winner = value; markFunDirty(); }, 'Переменные: {prize} {winners} {count}', 2),
-    settingArea('Никто не участвовал', draft.giveaways.messages.noEntries || '', function (value) { draft.giveaways.messages.noEntries = value; markFunDirty(); }, 'Переменная: {prize}', 2)
+    settingArea(t('Старт розыгрыша'), draft.giveaways.messages.start || '', function (value) { draft.giveaways.messages.start = value; markFunDirty(); }, t('Переменные: {prize} {keyword} {minutes} {winners}'), 3),
+    settingArea(t('Победитель'), draft.giveaways.messages.winner || '', function (value) { draft.giveaways.messages.winner = value; markFunDirty(); }, t('Переменные: {prize} {winners} {count}'), 2),
+    settingArea(t('Никто не участвовал'), draft.giveaways.messages.noEntries || '', function (value) { draft.giveaways.messages.noEntries = value; markFunDirty(); }, t('Переменная: {prize}'), 2)
   ]));
 
-  right.appendChild(settingsCard('Викторина', 'Вопросы и награда за правильный ответ', '', [
-    settingToggle('Викторина включена', '', draft.quiz.enabled !== false, function (value) {
+  right.appendChild(settingsCard(t('Викторина'), t('Вопросы и награда за правильный ответ'), '', [
+    settingToggle(t('Викторина включена'), '', draft.quiz.enabled !== false, function (value) {
       draft.quiz.enabled = value; markFunDirty();
     }),
-    settingNumber('Секунд на вопрос', draft.quiz.questionSeconds, 10, 600, function (value) { draft.quiz.questionSeconds = value; markFunDirty(); }),
-    settingNumber('Пауза между вопросами, сек', draft.quiz.betweenSeconds, 3, 600, function (value) { draft.quiz.betweenSeconds = value; markFunDirty(); }),
-    settingNumber('Подсказка через, сек', draft.quiz.hintAfterSeconds, 1, 600, function (value) { draft.quiz.hintAfterSeconds = value; markFunDirty(); }),
-    settingNumber('Награда, баллов', draft.quiz.rewardPoints, 0, 100000, function (value) { draft.quiz.rewardPoints = value; markFunDirty(); }),
-    settingNumber('Вопросов за запуск', draft.quiz.maxQuestions, 0, 100, function (value) { draft.quiz.maxQuestions = value; markFunDirty(); }, '0 — пока не закончатся вопросы.'),
-    settingArea('Вопросы: вопрос | ответы через запятую | подсказка',
+    settingNumber(t('Секунд на вопрос'), draft.quiz.questionSeconds, 10, 600, function (value) { draft.quiz.questionSeconds = value; markFunDirty(); }),
+    settingNumber(t('Пауза между вопросами, сек'), draft.quiz.betweenSeconds, 3, 600, function (value) { draft.quiz.betweenSeconds = value; markFunDirty(); }),
+    settingNumber(t('Подсказка через, сек'), draft.quiz.hintAfterSeconds, 1, 600, function (value) { draft.quiz.hintAfterSeconds = value; markFunDirty(); }),
+    settingNumber(t('Награда, баллов'), draft.quiz.rewardPoints, 0, 100000, function (value) { draft.quiz.rewardPoints = value; markFunDirty(); }),
+    settingNumber(t('Вопросов за запуск'), draft.quiz.maxQuestions, 0, 100, function (value) { draft.quiz.maxQuestions = value; markFunDirty(); }, t('0 — пока не закончатся вопросы.')),
+    settingArea(t('Вопросы: вопрос | ответы через запятую | подсказка'),
       questionsToText(draft.quiz.questions),
       function (value) {
         draft.quiz.questions = parseQuestions(value);
         markFunDirty();
       },
-      'Каждый вопрос с новой строки. Ответы можно перечислять через запятую; регистр не важен.', 8)
+      t('Каждый вопрос с новой строки. Ответы можно перечислять через запятую; регистр не важен.'), 8)
   ]));
 
-  right.appendChild(settingsCard('Благодарности за события', 'Подписки, подарки, рейды, битсы и фоллоу', '', [
-    settingToggle('Оповещения включены', '', draft.events.enabled !== false, function (value) {
+  right.appendChild(settingsCard(t('Благодарности за события'), t('Подписки, подарки, рейды, битсы и фоллоу'), '', [
+    settingToggle(t('Оповещения включены'), '', draft.events.enabled !== false, function (value) {
       draft.events.enabled = value; markFunDirty();
     }),
-    settingNumber('Минимум битсов', draft.events.minCheerBits, 1, 1000000, function (value) { draft.events.minCheerBits = value; markFunDirty(); }),
-    settingNumber('Минимум зрителей в рейде', draft.events.minRaidViewers, 0, 1000000, function (value) { draft.events.minRaidViewers = value; markFunDirty(); }),
-    settingArea('Подписка', draft.events.messages.sub || '', function (value) { draft.events.messages.sub = value; markFunDirty(); }, '{user}', 2),
-    settingArea('Продление', draft.events.messages.resub || '', function (value) { draft.events.messages.resub = value; markFunDirty(); }, '{user} {months}', 2),
-    settingArea('Подарочная подписка', draft.events.messages.gift || '', function (value) { draft.events.messages.gift = value; markFunDirty(); }, '{user} {recipient}', 2),
-    settingArea('Массовый подарок', draft.events.messages.massGift || '', function (value) { draft.events.messages.massGift = value; markFunDirty(); }, '{user} {count}', 2),
-    settingArea('Рейд', draft.events.messages.raid || '', function (value) { draft.events.messages.raid = value; markFunDirty(); }, '{user} {viewers}', 2),
-    settingArea('Битсы', draft.events.messages.cheer || '', function (value) { draft.events.messages.cheer = value; markFunDirty(); }, '{user} {bits}', 2),
-    settingArea('Фоллоу', draft.events.messages.follow || '', function (value) { draft.events.messages.follow = value; markFunDirty(); }, '{user}', 2),
-    el('p', { class: 'setting-hint', text: 'Для фоллоу нужен повторный вход через auth-twitch.bat: бот запросит право moderator:read:followers.' })
+    settingNumber(t('Минимум битсов'), draft.events.minCheerBits, 1, 1000000, function (value) { draft.events.minCheerBits = value; markFunDirty(); }),
+    settingNumber(t('Минимум зрителей в рейде'), draft.events.minRaidViewers, 0, 1000000, function (value) { draft.events.minRaidViewers = value; markFunDirty(); }),
+    settingArea(t('Подписка'), draft.events.messages.sub || '', function (value) { draft.events.messages.sub = value; markFunDirty(); }, '{user}', 2),
+    settingArea(t('Продление'), draft.events.messages.resub || '', function (value) { draft.events.messages.resub = value; markFunDirty(); }, '{user} {months}', 2),
+    settingArea(t('Подарочная подписка'), draft.events.messages.gift || '', function (value) { draft.events.messages.gift = value; markFunDirty(); }, '{user} {recipient}', 2),
+    settingArea(t('Массовый подарок'), draft.events.messages.massGift || '', function (value) { draft.events.messages.massGift = value; markFunDirty(); }, '{user} {count}', 2),
+    settingArea(t('Рейд'), draft.events.messages.raid || '', function (value) { draft.events.messages.raid = value; markFunDirty(); }, '{user} {viewers}', 2),
+    settingArea(t('Битсы'), draft.events.messages.cheer || '', function (value) { draft.events.messages.cheer = value; markFunDirty(); }, '{user} {bits}', 2),
+    settingArea(t('Фоллоу'), draft.events.messages.follow || '', function (value) { draft.events.messages.follow = value; markFunDirty(); }, '{user}', 2),
+    el('p', { class: 'setting-hint', text: t('Для фоллоу нужен повторный вход через auth-twitch.bat: бот запросит право moderator:read:followers.') })
   ]));
 
   columns.appendChild(left);
@@ -2199,11 +2221,11 @@ function renderFunView() {
   wrap.appendChild(el('div', { class: 'save-bar' },
     el('span', { class: 'dirty-note', style: { visibility: state.funDirty ? 'visible' : 'hidden' } },
       icon('info', 14),
-      el('span', { text: 'Есть несохранённые изменения' })
+      el('span', { text: t('Есть несохранённые изменения') })
     ),
     el('div', { class: 'check-row' },
-      button('Сбросить', 'reset', 'ghost small', resetFun),
-      button('Сохранить', 'save', 'primary small', saveFunSettings)
+      button(t('Сбросить'), 'reset', 'ghost small', resetFun),
+      button(t('Сохранить'), 'save', 'primary small', saveFunSettings)
     )
   ));
 
@@ -2223,7 +2245,7 @@ async function saveModerationSettings() {
     state.panel.moderation = data.moderation;
     state.modDraft = copy(data.moderation);
     state.modDirty = false;
-    toast('Модерация сохранена', 'ok');
+    toast(t('Модерация сохранена'), 'ok');
     render();
   } catch (error) {
     toast(error.message, 'error');
@@ -2261,7 +2283,7 @@ async function saveFunSettings() {
       events: data.events
     });
     state.funDirty = false;
-    toast('Настройки развлечений сохранены', 'ok');
+    toast(t('Настройки развлечений сохранены'), 'ok');
     render();
   } catch (error) {
     toast(error.message, 'error');
@@ -2294,8 +2316,8 @@ function renderLinksView() {
   const card = el('section', { class: 'card' });
   card.appendChild(el('div', { class: 'card-head' },
     el('div', null,
-      el('h2', { class: 'card-title', text: 'Ссылки сообщества' }),
-      el('p', { class: 'card-sub', text: 'Пустые поля не показываются в чате' })
+      el('h2', { class: 'card-title', text: t('Ссылки сообщества') }),
+      el('p', { class: 'card-sub', text: t('Пустые поля не показываются в чате') })
     ),
     el('span', { class: 'chip accent', text: '!social' })
   ));
@@ -2330,11 +2352,11 @@ function renderLinksView() {
   card.appendChild(el('div', { class: 'save-bar' },
     el('span', { class: 'dirty-note', id: 'links-dirty-note', style: { visibility: state.linksDirty ? 'visible' : 'hidden' } },
       icon('info', 14),
-      el('span', { text: 'Есть несохранённые изменения' })
+      el('span', { text: t('Есть несохранённые изменения') })
     ),
     el('div', { class: 'check-row' },
-      button('Сбросить', 'reset', 'ghost small', resetLinks),
-      button('Сохранить', 'save', 'primary small', saveLinks)
+      button(t('Сбросить'), 'reset', 'ghost small', resetLinks),
+      button(t('Сохранить'), 'save', 'primary small', saveLinks)
     )
   ));
   layout.appendChild(card);
@@ -2342,8 +2364,8 @@ function renderLinksView() {
   const preview = el('section', { class: 'card links-preview' },
     el('div', { class: 'card-head' },
       el('div', null,
-        el('h2', { class: 'card-title', text: 'Как увидит чат' }),
-        el('p', { class: 'card-sub', text: 'Ответ на команду !social' })
+        el('h2', { class: 'card-title', text: t('Как увидит чат') }),
+        el('p', { class: 'card-sub', text: t('Ответ на команду !social') })
       )
     ),
     el('div', { id: 'links-preview-body' })
@@ -2373,7 +2395,7 @@ function markLinksDirty() {
   const note = document.getElementById('links-dirty-note');
   if (note) note.style.visibility = 'visible';
   const sub = document.getElementById('page-sub');
-  if (sub) sub.textContent = 'Есть несохранённые изменения';
+  if (sub) sub.textContent = t('Есть несохранённые изменения');
   renderTopbar();
   paintLinksPreview();
 }
@@ -2386,7 +2408,7 @@ function paintLinksPreview() {
   if (!line) {
     mount.appendChild(el('div', { class: 'social-line-empty' },
       el('div', { class: 'empty-icon', style: { margin: '0 auto 10px' } }, icon('links', 22)),
-      el('p', { text: 'Заполни хотя бы одну ссылку — здесь появится ответ бота.' })
+      el('p', { text: t('Заполни хотя бы одну ссылку — здесь появится ответ бота.') })
     ));
     return;
   }
@@ -2406,7 +2428,7 @@ async function saveLinks() {
     state.panel.socials = data.socials;
     state.linksDraft = copy(data.socials);
     state.linksDirty = false;
-    toast('Ссылки сохранены', 'ok');
+    toast(t('Ссылки сохранены'), 'ok');
     render();
   } catch (error) {
     toast(error.message, 'error');
@@ -2440,7 +2462,7 @@ function confirmDialog(title, text, confirmLabel, onConfirm) {
       el('h3', { text: title }),
       el('p', { text: text }),
       el('div', { class: 'modal-actions' },
-        button('Отмена', null, 'ghost', close),
+        button(t('Отмена'), null, 'ghost', close),
         button(confirmLabel, 'trash', 'danger', function () { close(); onConfirm(); })
       )
     )
@@ -2453,6 +2475,9 @@ function confirmDialog(title, text, confirmLabel, onConfirm) {
 /* ---------- utilities ---------- */
 
 function plural(count, one, few, many) {
+  if (state.lang === 'en') {
+    return Math.abs(Number(count)) === 1 ? one : many;
+  }
   const n = Math.abs(Number(count)) % 100;
   const n1 = n % 10;
   if (n > 10 && n < 20) return many;
@@ -2464,6 +2489,8 @@ function plural(count, one, few, many) {
 /* ---------- boot ---------- */
 
 function init() {
+  state.lang = document.documentElement.getAttribute('data-lang') === 'en' ? 'en' : 'ru';
+  if (window.panelSetLang) window.panelSetLang(state.lang);
   fillStaticIcons();
   state.view = currentView();
   render();

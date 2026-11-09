@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru">
+<html lang="ru" data-lang="ru">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -14,7 +14,7 @@
 
   <div class="app">
     <aside class="sidebar">
-      <a class="brand" href="#overview" aria-label="На главную">
+      <a class="brand" href="#overview" aria-label="На главную" data-i18n-aria="На главную">
         <span class="brand-mark" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
             <rect x="4" y="6" width="16" height="12" rx="4"></rect>
@@ -28,32 +28,32 @@
         </span>
       </a>
 
-      <nav class="nav" aria-label="Разделы панели">
+      <nav class="nav" aria-label="Разделы панели" data-i18n-aria="Разделы панели">
         <a class="nav-item" href="#overview" data-view="overview">
           <span class="nav-icon" data-icon="overview"></span>
-          <span class="nav-label">Обзор</span>
+          <span class="nav-label" data-i18n="Обзор">Обзор</span>
         </a>
         <a class="nav-item" href="#commands" data-view="commands">
           <span class="nav-icon" data-icon="commands"></span>
-          <span class="nav-label">Команды</span>
+          <span class="nav-label" data-i18n="Команды">Команды</span>
           <span class="nav-count" id="nav-commands-count">—</span>
         </a>
         <a class="nav-item" href="#timers" data-view="timers">
           <span class="nav-icon" data-icon="timers"></span>
-          <span class="nav-label">Автосообщения</span>
+          <span class="nav-label" data-i18n="Автосообщения">Автосообщения</span>
           <span class="nav-count" id="nav-timers-count">—</span>
         </a>
         <a class="nav-item" href="#links" data-view="links">
           <span class="nav-icon" data-icon="links"></span>
-          <span class="nav-label">Ссылки</span>
+          <span class="nav-label" data-i18n="Ссылки">Ссылки</span>
         </a>
         <a class="nav-item" href="#moderation" data-view="moderation">
           <span class="nav-icon" data-icon="lock"></span>
-          <span class="nav-label">Модерация</span>
+          <span class="nav-label" data-i18n="Модерация">Модерация</span>
         </a>
         <a class="nav-item" href="#fun" data-view="fun">
           <span class="nav-icon" data-icon="spark"></span>
-          <span class="nav-label">Развлечения</span>
+          <span class="nav-label" data-i18n="Развлечения">Развлечения</span>
         </a>
       </nav>
 
@@ -68,7 +68,7 @@
       </div>
 
       <div class="side-note">
-        Локальная панель
+        <span data-i18n="Локальная панель">Локальная панель</span>
         <span>127.0.0.1:39001</span>
       </div>
     </aside>
@@ -76,9 +76,9 @@
     <div class="main">
       <header class="topbar">
         <div class="topbar-copy">
-          <p class="eyebrow" id="page-eyebrow">Панель управления</p>
-          <h1 id="page-title">Обзор</h1>
-          <p class="page-sub" id="page-sub">Статус бота и последние сообщения</p>
+          <p class="eyebrow" id="page-eyebrow" data-i18n="Панель управления">Панель управления</p>
+          <h1 id="page-title" data-i18n="Обзор">Обзор</h1>
+          <p class="page-sub" id="page-sub" data-i18n="Статус бота и последние сообщения">Статус бота и последние сообщения</p>
         </div>
         <div class="topbar-actions" id="topbar-actions"></div>
       </header>
@@ -91,6 +91,7 @@
   <div id="modal-root"></div>
   <div class="toasts" id="toast-root" aria-live="polite" aria-atomic="false"></div>
 
+  <script src="/assets/i18n.js" defer></script>
   <script src="/assets/app.js" defer></script>
 </body>
 </html>
